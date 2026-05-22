@@ -1,0 +1,462 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   ATELIER GLASS — Padel & Tennis scoring design system
+   Premium dark glass-morphism style. Custom property driven themes.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand — Padel Lime default */
+  --brand-primary: #a3e635;
+  --brand-dark:    #65a30d;
+  --brand-light:   rgba(163, 230, 53, 0.12);
+  --brand-glow:    rgba(163, 230, 53, 0.40);
+
+  /* Colors available via setup overrides */
+  --padel-lime:    #a3e635;
+  --padel-lime-dark: #65a30d;
+  --tennis-clay:   #cb8064;
+  --tennis-clay-dark: #a35a3f;
+  --hard-blue:     #38bdf8;
+  --hard-blue-dark:  #0284c7;
+  --sunset-purple: #c084fc;
+  --sunset-purple-dark: #7c3aed;
+
+  /* Text */
+  --text-primary:   #f3f1ed;
+  --text-secondary: rgba(243, 241, 237, 0.62);
+  --text-tertiary:  rgba(243, 241, 237, 0.40);
+  --text-inverse:   #0e1017;
+
+  /* Surfaces — glass system */
+  --surface-heavy:  rgba(15, 17, 26, 0.65);
+  --surface-card:   rgba(255, 255, 255, 0.045);
+  --surface-float:  rgba(11, 13, 20, 0.85);
+  --surface-dark:   rgba(8, 9, 14, 0.65);
+  --surface-inset:  rgba(0, 0, 0, 0.25);
+
+  /* Hairlines */
+  --hairline:        rgba(255, 255, 255, 0.07);
+  --hairline-strong: rgba(255, 255, 255, 0.12);
+  --hairline-soft:   rgba(255, 255, 255, 0.04);
+
+  /* Semantic */
+  --success: #5eb88a;
+  --success-bg: rgba(94, 184, 138, 0.14);
+  --warning: #e2b669;
+  --warning-bg: rgba(226, 182, 105, 0.14);
+  --danger:  #e07a72;
+  --danger-bg: rgba(224, 122, 114, 0.14);
+  --info:    #7aa6e0;
+  --info-bg: rgba(122, 166, 224, 0.14);
+
+  /* Radii */
+  --r-panel:  24px;
+  --r-card:   18px;
+  --r-modal:  24px;
+  --r-pill:   50px;
+  --r-badge:  12px;
+  --r-input:  14px;
+  --r-tile:   16px;
+
+  /* Shadow / glow */
+  --shadow-panel: 0 30px 80px -20px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.05) inset;
+  --shadow-card:  0 10px 30px -12px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --shadow-float: 0 40px 100px -20px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.07) inset;
+  --shadow-brand: 0 8px 24px -4px var(--brand-glow), 0 1px 0 rgba(255,255,255,0.18) inset;
+  --shadow-pill:  0 2px 8px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.05) inset;
+
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Background — rich, layered sports field design.
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-bg {
+  position: relative;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 15%, color-mix(in oklab, var(--brand-primary) 18%, transparent) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 85% 85%, rgba(101, 163, 13, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(30, 41, 59, 0.25) 0%, transparent 60%),
+    linear-gradient(155deg, #07090e 0%, #0d0f17 40%, #111420 75%, #151824 100%);
+  color: var(--text-primary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+.ag-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.4;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Glass surface utilities
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-heavy {
+  background: var(--surface-heavy);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  backdrop-filter: blur(40px) saturate(160%);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-panel);
+}
+.ag-card {
+  background: var(--surface-card);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+.ag-card-solid {
+  background: rgba(20, 23, 33, 0.88);
+  -webkit-backdrop-filter: blur(25px);
+  backdrop-filter: blur(25px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+.ag-float {
+  background: var(--surface-float);
+  -webkit-backdrop-filter: blur(60px) saturate(170%);
+  backdrop-filter: blur(60px) saturate(170%);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-modal);
+  box-shadow: var(--shadow-float);
+}
+.ag-dark {
+  background: var(--surface-dark);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  border: 1px solid var(--hairline-soft);
+}
+.ag-inset {
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--r-card);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Type
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+.ag-h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+.ag-h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+.ag-h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.ag-h4 { font-size: 13px; font-weight: 600; }
+.ag-body { font-size: 13px; font-weight: 400; line-height: 1.5; color: var(--text-secondary); }
+.ag-meta { font-size: 10px; font-weight: 500; letter-spacing: 0.05em; color: var(--text-tertiary); text-transform: uppercase; }
+.ag-mono { font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace; }
+
+/* Scoreboard Large Numbers */
+.score-glow {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 110px;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  color: #fff;
+  text-shadow: 0 0 40px var(--brand-glow), 0 0 4px #fff;
+  user-select: none;
+}
+.score-glow-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 42px;
+  line-height: 1;
+  color: var(--text-primary);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Buttons
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font); font-size: 12.5px; font-weight: 600;
+  padding: 10px 18px; border-radius: var(--r-pill); border: 1px solid transparent;
+  cursor: pointer; transition: transform .1s ease, box-shadow .15s ease, background .15s;
+  white-space: nowrap;
+}
+.ag-btn:hover { transform: translateY(-1px); }
+.ag-btn:active { transform: translateY(0); }
+
+.ag-btn-primary {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-dark));
+  color: var(--text-inverse);
+  font-weight: 700;
+  box-shadow: var(--shadow-brand);
+}
+.ag-btn-primary:hover {
+  box-shadow: 0 10px 28px -4px var(--brand-glow), 0 1px 0 rgba(255,255,255,0.25) inset;
+}
+.ag-btn-ghost {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  border-color: var(--hairline-strong);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.ag-btn-ghost:hover { background: rgba(255,255,255,0.08); }
+.ag-btn-outline {
+  background: transparent; color: var(--text-primary);
+  border-color: var(--hairline-strong);
+}
+.ag-btn-outline:hover { background: rgba(255,255,255,0.04); }
+.ag-btn-link {
+  background: transparent; padding: 6px 8px; color: var(--brand-primary);
+  border-radius: 8px;
+}
+.ag-btn-link:hover { background: var(--brand-light); }
+.ag-btn-sm { padding: 6px 12px; font-size: 11px; }
+.ag-btn-lg { padding: 14px 24px; font-size: 13.5px; }
+.ag-btn-block { width: 100%; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Pills, badges, chips
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 11.5px; font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ag-pill:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.ag-pill-active {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-dark));
+  color: var(--text-inverse);
+  font-weight: 700;
+  border-color: transparent;
+  box-shadow: var(--shadow-pill), 0 0 14px var(--brand-glow);
+}
+.ag-pill-active:hover { background: linear-gradient(135deg, var(--brand-primary), var(--brand-dark)); color: var(--text-inverse); }
+
+.ag-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--r-badge);
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ag-badge-brand { background: var(--brand-light); color: var(--brand-primary); }
+.ag-badge-success { background: var(--success-bg); color: var(--success); }
+.ag-badge-warning { background: var(--warning-bg); color: var(--warning); }
+.ag-badge-danger  { background: var(--danger-bg); color: var(--danger); }
+.ag-badge-info    { background: var(--info-bg); color: var(--info); }
+.ag-badge-neutral { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Inputs & Form layouts
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-input, .ag-textarea, .ag-select {
+  width: 100%;
+  font-family: var(--font); font-size: 12.5px; font-weight: 500;
+  color: var(--text-primary);
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-input);
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .15s, background .15s;
+  box-sizing: border-box;
+}
+.ag-input::placeholder, .ag-textarea::placeholder { color: var(--text-tertiary); }
+.ag-input:focus, .ag-textarea:focus, .ag-select:focus {
+  border-color: var(--brand-primary);
+  background: rgba(0,0,0,0.35);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+.ag-label {
+  display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Toggle
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-toggle {
+  position: relative; display: inline-block;
+  width: 36px; height: 20px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  cursor: pointer; transition: background .2s;
+  flex-shrink: 0;
+}
+.ag-toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: transform .2s;
+}
+.ag-toggle.on {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-dark));
+  border-color: transparent;
+}
+.ag-toggle.on::after {
+  transform: translateX(16px);
+  background: var(--text-inverse);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Tables
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.ag-table thead th {
+  text-align: left;
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ag-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--hairline-soft);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.ag-table tbody tr:last-child td { border-bottom: none; }
+.ag-table tbody tr:hover td { background: rgba(255,255,255,0.015); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Scrollbar (subtle)
+   ────────────────────────────────────────────────────────────────────────── */
+.ag-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent; }
+.ag-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+.ag-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+.ag-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Court Layout Scorer Widgets
+   ────────────────────────────────────────────────────────────────────────── */
+.court-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: var(--hairline-strong);
+  border: 4px solid var(--text-primary);
+  border-radius: 12px;
+  padding: 4px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6);
+}
+.court-half {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  position: relative;
+}
+.court-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.3s;
+}
+.court-zone:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.court-net {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+/* Big Scoring Click Targets */
+.score-pad-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px;
+  border-radius: var(--r-card);
+  cursor: pointer;
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--hairline);
+  position: relative;
+  overflow: hidden;
+}
+.score-pad-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--brand-primary), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 0;
+}
+.score-pad-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+.score-pad-btn:hover::before {
+  opacity: 0.05;
+}
+.score-pad-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+.score-pad-btn-primary {
+  border-color: color-mix(in oklab, var(--brand-primary) 30%, transparent);
+}
+.score-pad-btn-primary:hover {
+  border-color: var(--brand-primary);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 5px var(--brand-glow); }
+  50% { opacity: 1; box-shadow: 0 0 18px var(--brand-glow); }
+}
+.pulse-glow-border {
+  animation: pulse-glow 2s infinite ease-in-out;
+  border-color: var(--brand-primary) !important;
+}
+
+.ag-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+  border: none;
+}
+.ag-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+}
+
+/* Prevent double scroll inside design canvas artboard */
+.ag-screen { overflow: hidden; box-sizing: border-box; }
+* { box-sizing: border-box; }
