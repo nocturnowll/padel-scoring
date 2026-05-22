@@ -1,5 +1,46 @@
 /* screens/setup.jsx — Setup Wizard screen */
 
+function StepPills({ current, total, labels }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginBottom: 10, width: '100%' }}>
+      {Array.from({ length: total }).map((_, idx) => {
+        const active = current === idx + 1;
+        const done = current > idx + 1;
+        return (
+          <div 
+            key={idx} 
+            className={`ag-inset ${active ? 'pulse-glow-border' : ''}`}
+            style={{
+              flex: 1, 
+              padding: '10px 14px', 
+              textAlign: 'center', 
+              background: active 
+                ? 'var(--brand-light)' 
+                : done 
+                  ? 'rgba(255, 255, 255, 0.02)' 
+                  : 'rgba(0, 0, 0, 0.1)',
+              borderColor: active 
+                ? 'var(--brand-primary)' 
+                : done 
+                  ? 'rgba(255, 255, 255, 0.15)' 
+                  : 'var(--hairline)',
+              opacity: active || done ? 1 : 0.5,
+              transition: 'all 0.25s'
+            }}
+          >
+            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: active ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
+              Step {idx + 1}
+            </div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: '#fff', marginTop: 2 }}>
+              {labels[idx]}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SetupScreen({ tweaks, onBack, onStart }) {
   const [step, setStep] = React.useState(1); // Step 1, 2, 3
 
