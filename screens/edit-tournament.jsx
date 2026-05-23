@@ -738,7 +738,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                       key={match.id || mIdx}
                       className="ag-card"
                       style={{ 
-                        padding: 16, 
+                        padding: 22, 
                         border: isLocked ? '1px solid var(--hairline)' : '1px solid var(--brand-glow)',
                         background: isLocked ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)'
                       }}

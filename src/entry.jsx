@@ -1567,7 +1567,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         
         {/* Round Switcher Pill Bar */}
-        <div className="ag-card" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="ag-card" style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button 
             className="ag-btn ag-btn-ghost ag-btn-sm" 
             disabled={activeRoundIndex === 0} 
@@ -1646,14 +1646,14 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                       </div>
                       
                       {/* Players */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreA >= scoreB && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
                             {getTeamAPlayersString(match)}
                           </span>
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>vs</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div style={{ fontSize: 8.5, letterSpacing: '0.08em', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>vs</div>
+                        <div style={{ fontSize: 15, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreB >= scoreA && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
                             {getTeamBPlayersString(match)}
                           </span>
@@ -1742,7 +1742,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
           </div>
 
           {/* Sit-out Bench sidebar */}
-          <div className="ag-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="ag-card" style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h4 className="ag-h4" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="coffee" size={14} color="var(--brand-primary)" /> Resting Bench
             </h4>
@@ -2518,7 +2518,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                       key={match.id || mIdx}
                       className="ag-card"
                       style={{ 
-                        padding: 16, 
+                        padding: 22, 
                         border: isLocked ? '1px solid var(--hairline)' : '1px solid var(--brand-glow)',
                         background: isLocked ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)'
                       }}

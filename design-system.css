@@ -700,26 +700,27 @@
 }
 
 .ag-match-card {
-  padding: 16px;
+  padding: 22px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s;
-  gap: 16px;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  gap: 20px;
 }
 .ag-match-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -8px rgba(0,0,0,0.5), 0 0 12px var(--brand-glow);
 }
 .ag-match-card-players {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: center;
 }
 .ag-match-card-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 24px;
 }
 
 @media (max-width: 500px) {
