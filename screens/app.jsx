@@ -218,6 +218,19 @@ function App() {
                 setCurrentScreen('interactive-scorer');
               }}
               onViewLeaderboard={() => setCurrentScreen('leaderboard')}
+              onEditTournament={() => setCurrentScreen('edit-tournament')}
+            />
+          );
+        case 'edit-tournament':
+          return (
+            <EditTournamentScreen 
+              tweaks={tweaks}
+              tournament={activeTournament}
+              onBack={() => setCurrentScreen('active-matches')}
+              onSave={(updatedTournament) => {
+                updateTournamentState(updatedTournament);
+                setCurrentScreen('active-matches');
+              }}
             />
           );
         case 'interactive-scorer':

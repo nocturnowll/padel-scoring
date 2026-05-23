@@ -1,6 +1,6 @@
 /* screens/active-matches.jsx — Active Match Schedule Grid */
 
-function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard }) {
+function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard, onEditTournament }) {
   const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
 
   if (!tournament) {
@@ -45,6 +45,9 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
       onBack={onBack}
       actions={
         <div style={{ display: 'flex', gap: 10 }}>
+          <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={onEditTournament}>
+            <Icon name="pencil" size={13} style={{ marginRight: 4 }} /> Edit Tournament
+          </button>
           <button className="ag-btn ag-btn-ghost ag-btn-sm" style={{ color: 'var(--danger)' }} onClick={onCancelTournament}>
             <Icon name="trash-2" size={14} /> End Event
           </button>
