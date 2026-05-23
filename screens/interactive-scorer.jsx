@@ -33,6 +33,54 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   const [elapsed, setElapsed] = React.useState(0);
   const [timerActive, setTimerActive] = React.useState(true);
   
+  const [showChangeServe, setShowChangeServe] = React.useState(false);
+
+  React.useEffect(() => {
+    // Add keyframes for fadeInUp if not already present
+    if (!document.getElementById('ag-scorer-dynamic-styles')) {
+      const style = document.createElement('style');
+      style.id = 'ag-scorer-dynamic-styles';
+      style.innerHTML = `
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        @keyframes spinSlow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-slow {
+          animation: spinSlow 3s linear infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  const getPlayerByServerIndex = (team, index) => {
+    if (!team) return null;
+    return index === 0 ? (team.p1 || team[0]) : (team.p2 || team[1]);
+  };
+
+  const getServesLeft = () => {
+    if (!isPointsMode) return null;
+    const ptsLimit = match.rules.pointsLimit || 24;
+    const servesPerTurn = Math.floor(ptsLimit / 4);
+    const totalPts = teamAScore + teamBScore;
+    
+    if (totalPts < 4 * servesPerTurn) {
+      return servesPerTurn - (totalPts % servesPerTurn);
+    } else {
+      return ptsLimit - totalPts;
+    }
+  };
+
   const isMountedRef = React.useRef(false);
 
   // Auto-Save after every single scoring input in background
@@ -222,12 +270,18 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
       setServing(nextServing);
       setServerIndex(nextServerIndex);
       if (totalPts < ptsLimit) {
-        SpeechAnnouncer.speak(tweaks.refereeVoice.startsWith('es') ? "Cambio de servicio" : "change serve", tweaks.refereeVoice);
+        setShowChangeServe(true);
+        setTimeout(() => setShowChangeServe(false), 2500);
       }
     }
 
-    // Call Vocal referee to read score aloud
-    SpeechAnnouncer.announceScore(nextA, nextB, false, false, tweaks.refereeVoice);
+    // Call Vocal referee to read score aloud, combining with "change serve" if it rotates
+    let phrase = `${nextA} - ${nextB}`;
+    if (serviceChanged && totalPts < ptsLimit) {
+      const changeMsg = tweaks.refereeVoice.startsWith('es') ? "Cambio de servicio. " : "change serve. ";
+      phrase = changeMsg + phrase;
+    }
+    SpeechAnnouncer.speak(phrase, tweaks.refereeVoice);
 
     // Check if match is completed (e.g. reached point limit, e.g. play exactly 24 points or first to 24)
     // Most Americanos play EXACTLY a fixed number of points (e.g., sum is 24, score can be 14-10)
@@ -506,6 +560,23 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
           </div>
         )}
 
+        {/* Americano Serves Remaining Bar */}
+        {isPointsMode && (
+          <div className="ag-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'rgba(163, 230, 53, 0.03)', border: '1px solid rgba(163, 230, 53, 0.1)', borderRadius: 12, marginBottom: 5 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.02em' }}>
+              <Icon name="zap" size={13} className="spin-slow" />
+              {(() => {
+                const left = getServesLeft();
+                const activeServer = serving === 'teamA' 
+                  ? getPlayerByServerIndex(match.teamA, serverIndex) 
+                  : getPlayerByServerIndex(match.teamB, serverIndex);
+                const activeServerName = getPlayerName(activeServer);
+                return `${activeServerName} serving — ${left} serve${left > 1 ? 's' : ''} left`;
+              })()}
+            </span>
+          </div>
+        )}
+
         {/* Dynamic score zone */}
         <div className="ag-scorer-touchpads-grid" style={{ flex: 1 }}>
           
@@ -526,9 +597,42 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
             </h1>
             
             {/* Team Roster */}
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
-              {getPlayerName(match.teamA[0])} {match.teamA[1] && getPlayerName(match.teamA[1]) && `+ ${getPlayerName(match.teamA[1])}`}
-            </div>
+            {(() => {
+              const p1 = match.teamA.p1 || match.teamA[0];
+              const p2 = match.teamA.p2 || match.teamA[1];
+              const p1Name = getPlayerName(p1);
+              const p2Name = getPlayerName(p2);
+              const isP1Serving = serving === 'teamA' && serverIndex === 0;
+              const isP2Serving = serving === 'teamA' && serverIndex === 1;
+
+              return (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
+                  <span style={{ 
+                    color: isP1Serving ? 'var(--brand-primary)' : 'inherit',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}>
+                    {isP1Serving && <span className="ag-dot" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 8px var(--brand-primary)', width: 6, height: 6 }} />}
+                    {p1Name}
+                  </span>
+                  {p2Name && (
+                    <>
+                      <span style={{ opacity: 0.4 }}>+</span>
+                      <span style={{ 
+                        color: isP2Serving ? 'var(--brand-primary)' : 'inherit',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5
+                      }}>
+                        {isP2Serving && <span className="ag-dot" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 8px var(--brand-primary)', width: 6, height: 6 }} />}
+                        {p2Name}
+                      </span>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Set games if in progress */}
             {isTennisMode && !isTiebreaker && (
@@ -558,9 +662,42 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
             </h1>
             
             {/* Team Roster */}
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
-              {getPlayerName(match.teamB[0])} {match.teamB[1] && getPlayerName(match.teamB[1]) && `+ ${getPlayerName(match.teamB[1])}`}
-            </div>
+            {(() => {
+              const p1 = match.teamB.p1 || match.teamB[0];
+              const p2 = match.teamB.p2 || match.teamB[1];
+              const p1Name = getPlayerName(p1);
+              const p2Name = getPlayerName(p2);
+              const isP1Serving = serving === 'teamB' && serverIndex === 0;
+              const isP2Serving = serving === 'teamB' && serverIndex === 1;
+
+              return (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
+                  <span style={{ 
+                    color: isP1Serving ? 'var(--brand-primary)' : 'inherit',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}>
+                    {isP1Serving && <span className="ag-dot" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 8px var(--brand-primary)', width: 6, height: 6 }} />}
+                    {p1Name}
+                  </span>
+                  {p2Name && (
+                    <>
+                      <span style={{ opacity: 0.4 }}>+</span>
+                      <span style={{ 
+                        color: isP2Serving ? 'var(--brand-primary)' : 'inherit',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5
+                      }}>
+                        {isP2Serving && <span className="ag-dot" style={{ background: 'var(--brand-primary)', boxShadow: '0 0 8px var(--brand-primary)', width: 6, height: 6 }} />}
+                        {p2Name}
+                      </span>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Set games if in progress */}
             {isTennisMode && !isTiebreaker && (
@@ -603,6 +740,32 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
             Announcer: <span style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Active Voice Referee 🔊</span>
           </div>
         </div>
+
+        {/* Floating Change Serve Toast Alert */}
+        {showChangeServe && (
+          <div className="ag-toast ag-toast-brand" style={{
+            position: 'absolute',
+            top: '25%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            animation: 'fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            boxShadow: '0 12px 40px rgba(163, 230, 53, 0.25)',
+            border: '2px solid var(--brand-primary)',
+            background: 'rgba(10, 15, 10, 0.92)',
+            backdropFilter: 'blur(16px)',
+            padding: '16px 32px',
+            borderRadius: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12
+          }}>
+            <Icon name="refresh-cw" className="spin-slow" style={{ color: 'var(--brand-primary)' }} size={20} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Change Serve!
+            </span>
+          </div>
+        )}
 
       </div>
     </AppLayout>
