@@ -16,9 +16,11 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
   // Tally leaderboard from active matches
   const standings = StatsEngine.tallyTournament(tournament);
 
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+
   // Check if tournament is ready to finalize (all matches completed)
-  const allMatchesCompleted = tournament.rounds.every(round => 
-    round.matches.every(match => match.completed)
+  const allMatchesCompleted = rounds.length > 0 && rounds.every(round => 
+    round.matches && round.matches.every(match => match && match.completed)
   );
 
   // TV Cast Widescreen Layout
@@ -131,21 +133,22 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
             </h3>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }} className="ag-scroll">
-              {tournament.rounds.map((round, rIdx) => (
+              {rounds.map((round, rIdx) => (
                 <div key={rIdx} className="ag-inset" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', borderBottom: '1px solid var(--hairline-soft)', paddingBottom: 4 }}>
                     {round.name}
                   </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {round.matches.map((match, mIdx) => {
+                    {round.matches && round.matches.map((match, mIdx) => {
+                      if (!match) return null;
                       const scoreA = match.score ? match.score.teamAScore : 0;
                       const scoreB = match.score ? match.score.teamBScore : 0;
                       
                       return (
                         <div key={mIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                           <span style={{ color: 'var(--text-secondary)' }}>
-                            Crt {match.court}: {match.teamA.p1.name} {match.teamA.p2.name && `+ ${match.teamA.p2.name}`} vs {match.teamB.p1.name} {match.teamB.p2.name && `+ ${match.teamB.p2.name}`}
+                            Crt {match.court}: {getTeamAPlayersString(match)} vs {getTeamBPlayersString(match)}
                           </span>
                           
                           {match.completed ? (

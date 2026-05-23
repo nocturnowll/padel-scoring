@@ -363,18 +363,43 @@ const Matchmaker = {
 // ──────────────────────────────────────────────────────────────────────────
 // Leaderboard Stats Tally Engine
 // ──────────────────────────────────────────────────────────────────────────
+const getPlayerName = (p) => {
+  if (!p) return '';
+  return typeof p === 'object' ? p.name : p;
+};
+
+const getTeamAPlayersString = (match) => {
+  if (!match || !match.teamA) return 'Unknown';
+  const p1Name = getPlayerName(match.teamA.p1);
+  const p2Name = getPlayerName(match.teamA.p2);
+  if (p1Name && p2Name) return `${p1Name} + ${p2Name}`;
+  return p1Name || p2Name || 'Unknown';
+};
+
+const getTeamBPlayersString = (match) => {
+  if (!match || !match.teamB) return 'Unknown';
+  const p1Name = getPlayerName(match.teamB.p1);
+  const p2Name = getPlayerName(match.teamB.p2);
+  if (p1Name && p2Name) return `${p1Name} + ${p2Name}`;
+  return p1Name || p2Name || 'Unknown';
+};
+
 const StatsEngine = {
   // Re-calculates player rankings from scratch based on all completed match scores
   tallyTournament: (tournament) => {
-    if (!tournament) return [];
+    if (!tournament || !tournament.players || !Array.isArray(tournament.players)) return [];
     
-    const isIndividual = tournament.format.includes('individual') || tournament.format === 'mexicano';
+    const format = tournament.format || 'individual_americano';
+    const isIndividual = format.includes('individual') || format === 'mexicano';
     
     // Reset player scores
     const playerMap = {};
     tournament.players.forEach(p => {
-      playerMap[p.id] = {
+      if (!p) return;
+      const pId = p.id || `p_${Math.random()}`;
+      playerMap[pId] = {
         ...p,
+        id: pId,
         points: 0,
         diff: 0,
         played: 0,
@@ -385,17 +410,22 @@ const StatsEngine = {
     });
     
     // Process all rounds and finished matches
-    tournament.rounds.forEach(round => {
+    const rounds = tournament.rounds || [];
+    rounds.forEach(round => {
+      if (!round || !round.matches) return;
       round.matches.forEach(match => {
-        if (!match.completed || !match.score) return;
+        if (!match || !match.completed || !match.score) return;
         
-        const scoreA = match.score.teamAScore;
-        const scoreB = match.score.teamBScore;
+        const scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
+        const scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
         const diff = scoreA - scoreB;
         
         if (isIndividual) {
-          // Update Team A players
-          const idsA = [match.teamA.p1.id, match.teamA.p2.id];
+          if (!match.teamA || !match.teamB) return;
+          const p1A = match.teamA.p1 ? match.teamA.p1.id : null;
+          const p2A = match.teamA.p2 ? match.teamA.p2.id : null;
+          const idsA = [p1A, p2A].filter(Boolean);
+          
           idsA.forEach(id => {
             if (playerMap[id]) {
               playerMap[id].played += 1;
@@ -406,8 +436,10 @@ const StatsEngine = {
             }
           });
           
-          // Update Team B players
-          const idsB = [match.teamB.p1.id, match.teamB.p2.id];
+          const p1B = match.teamB.p1 ? match.teamB.p1.id : null;
+          const p2B = match.teamB.p2 ? match.teamB.p2.id : null;
+          const idsB = [p1B, p2B].filter(Boolean);
+          
           idsB.forEach(id => {
             if (playerMap[id]) {
               playerMap[id].played += 1;
@@ -419,10 +451,10 @@ const StatsEngine = {
           });
         } else {
           // Team Americano (fixed pairs, players list are actually teams)
-          const teamIdA = match.rawTeamA ? match.rawTeamA.id : match.teamA.p1.id;
-          const teamIdB = match.rawTeamB ? match.rawTeamB.id : match.teamB.p1.id;
+          const teamIdA = match.rawTeamA ? match.rawTeamA.id : (match.teamA && match.teamA.p1 ? match.teamA.p1.id : null);
+          const teamIdB = match.rawTeamB ? match.rawTeamB.id : (match.teamB && match.teamB.p1 ? match.teamB.p1.id : null);
           
-          if (playerMap[teamIdA]) {
+          if (teamIdA && playerMap[teamIdA]) {
             playerMap[teamIdA].played += 1;
             playerMap[teamIdA].points += scoreA;
             playerMap[teamIdA].diff += diff;
@@ -430,7 +462,7 @@ const StatsEngine = {
             else if (diff < 0) playerMap[teamIdA].lost += 1;
           }
           
-          if (playerMap[teamIdB]) {
+          if (teamIdB && playerMap[teamIdB]) {
             playerMap[teamIdB].played += 1;
             playerMap[teamIdB].points += scoreB;
             playerMap[teamIdB].diff -= diff;
@@ -443,9 +475,10 @@ const StatsEngine = {
     
     // Convert back to sorted array
     // Rank primary by Wins (for Tennis/Sets) or Points Tally (for Americano points)
+    const scoringMode = tournament.scoringMode || 'points';
     return Object.values(playerMap).sort((a, b) => {
       // In classic Americano, points won is primary. In sets/tennis, matches won/diff is primary.
-      if (tournament.scoringMode === 'tennis') {
+      if (scoringMode === 'tennis') {
         if (b.won !== a.won) return b.won - a.won; // Most match wins
         if (b.diff !== a.diff) return b.diff - a.diff; // Best game difference
         return b.points - a.points; // Most total points
@@ -495,4 +528,4 @@ function AppLayout({ tweaks, children, onBack, title, eyebrow, actions }) {
   );
 }
 
-Object.assign(window, { Icon, SpeechAnnouncer, Matchmaker, StatsEngine, AppLayout });
+Object.assign(window, { Icon, SpeechAnnouncer, Matchmaker, StatsEngine, AppLayout, getPlayerName, getTeamAPlayersString, getTeamBPlayersString });

@@ -13,13 +13,14 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
     );
   }
 
-  const currentRound = tournament.rounds[activeRoundIndex] || tournament.rounds[0];
-  const totalRounds = tournament.rounds.length;
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+  const totalRounds = rounds.length;
+  const currentRound = rounds[activeRoundIndex] || rounds[0] || { matches: [], sittingOut: [] };
 
   // Check if all matches in active round are finished
-  const roundMatches = currentRound.matches;
-  const finishedCount = roundMatches.filter(m => m.completed).length;
-  const isRoundFinished = finishedCount === roundMatches.length;
+  const roundMatches = currentRound.matches || [];
+  const finishedCount = roundMatches.filter(m => m && m.completed).length;
+  const isRoundFinished = roundMatches.length > 0 && finishedCount === roundMatches.length;
 
   // Smart checking if there are subsequent rounds to generate (e.g. for Mexicano)
   const isLastRound = activeRoundIndex === totalRounds - 1;
@@ -67,7 +68,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
           </button>
           
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0' }} className="ag-scroll">
-            {tournament.rounds.map((r, idx) => (
+            {rounds.map((r, idx) => (
               <button
                 key={idx}
                 className={`ag-pill ${activeRoundIndex === idx ? 'ag-pill-active' : ''}`}
@@ -75,7 +76,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 style={{ height: 28, fontSize: 11, whiteSpace: 'nowrap' }}
               >
                 Round {idx + 1}
-                {r.matches.every(m => m.completed) && <span style={{ marginLeft: 6, fontSize: 9 }}>✓</span>}
+                {r.matches && Array.isArray(r.matches) && r.matches.every(m => m && m.completed) && <span style={{ marginLeft: 6, fontSize: 9 }}>✓</span>}
               </button>
             ))}
           </div>
@@ -104,9 +105,12 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               {roundMatches.map((match, mIdx) => {
-                const hasScore = match.score !== null;
-                const scoreA = hasScore ? match.score.teamAScore : 0;
-                const scoreB = hasScore ? match.score.teamBScore : 0;
+                if (!match) return null;
+                const hasScore = match.score !== null && match.score !== undefined;
+                const score = match.score || {};
+                const scoreA = hasScore && score.teamAScore !== undefined ? score.teamAScore : 0;
+                const scoreB = hasScore && score.teamBScore !== undefined ? score.teamBScore : 0;
+                const sets = score.sets || [];
                 
                 return (
                   <div 
@@ -132,13 +136,13 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreA >= scoreB && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
-                            {match.teamA.p2.name ? `${match.teamA.p1.name} + ${match.teamA.p2.name}` : match.teamA.p1.name}
+                            {getTeamAPlayersString(match)}
                           </span>
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>vs</div>
                         <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreB >= scoreA && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
-                            {match.teamB.p2.name ? `${match.teamB.p1.name} + ${match.teamB.p2.name}` : match.teamB.p1.name}
+                            {getTeamBPlayersString(match)}
                           </span>
                         </div>
                       </div>
@@ -152,7 +156,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                           {tournament.scoringMode === 'tennis' ? (
                             /* Traditional Sets view */
                             <div style={{ display: 'flex', gap: 4 }}>
-                              {match.score.sets && match.score.sets.map((set, sIdx) => (
+                              {sets.map((set, sIdx) => (
                                 <div key={sIdx} className="ag-inset" style={{ padding: '4px 8px', fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 600 }}>
                                   {set.teamA} - {set.teamB}
                                 </div>
@@ -160,7 +164,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                               {/* Live Score if in-progress */}
                               {!match.completed && (
                                 <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4 }}>
-                                  {match.score.teamAScore} - {match.score.teamBScore}
+                                  {scoreA} - {scoreB}
                                 </div>
                               )}
                             </div>
@@ -230,7 +234,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 currentRound.sittingOut.map((p, pIdx) => (
                   <div key={pIdx} className="ag-inset" style={{ padding: '8px 10px', fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
                     <span className="ag-dot" style={{ background: 'var(--text-tertiary)' }} />
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ fontWeight: 500 }}>{p && typeof p === 'object' ? p.name : p || 'Unknown'}</span>
                   </div>
                 ))
               ) : (

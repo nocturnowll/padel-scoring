@@ -1,4 +1,4 @@
-/* Concatenated Padel App Source */
+/* Concatenated Safeguarded Padel App Source */
 
 /* --- START FILE: shared.jsx --- */
 /* shared.jsx — common components and core matchmaking logic */
@@ -366,18 +366,43 @@ const Matchmaker = {
 // ──────────────────────────────────────────────────────────────────────────
 // Leaderboard Stats Tally Engine
 // ──────────────────────────────────────────────────────────────────────────
+const getPlayerName = (p) => {
+  if (!p) return '';
+  return typeof p === 'object' ? p.name : p;
+};
+
+const getTeamAPlayersString = (match) => {
+  if (!match || !match.teamA) return 'Unknown';
+  const p1Name = getPlayerName(match.teamA.p1);
+  const p2Name = getPlayerName(match.teamA.p2);
+  if (p1Name && p2Name) return `${p1Name} + ${p2Name}`;
+  return p1Name || p2Name || 'Unknown';
+};
+
+const getTeamBPlayersString = (match) => {
+  if (!match || !match.teamB) return 'Unknown';
+  const p1Name = getPlayerName(match.teamB.p1);
+  const p2Name = getPlayerName(match.teamB.p2);
+  if (p1Name && p2Name) return `${p1Name} + ${p2Name}`;
+  return p1Name || p2Name || 'Unknown';
+};
+
 const StatsEngine = {
   // Re-calculates player rankings from scratch based on all completed match scores
   tallyTournament: (tournament) => {
-    if (!tournament) return [];
+    if (!tournament || !tournament.players || !Array.isArray(tournament.players)) return [];
     
-    const isIndividual = tournament.format.includes('individual') || tournament.format === 'mexicano';
+    const format = tournament.format || 'individual_americano';
+    const isIndividual = format.includes('individual') || format === 'mexicano';
     
     // Reset player scores
     const playerMap = {};
     tournament.players.forEach(p => {
-      playerMap[p.id] = {
+      if (!p) return;
+      const pId = p.id || `p_${Math.random()}`;
+      playerMap[pId] = {
         ...p,
+        id: pId,
         points: 0,
         diff: 0,
         played: 0,
@@ -388,17 +413,22 @@ const StatsEngine = {
     });
     
     // Process all rounds and finished matches
-    tournament.rounds.forEach(round => {
+    const rounds = tournament.rounds || [];
+    rounds.forEach(round => {
+      if (!round || !round.matches) return;
       round.matches.forEach(match => {
-        if (!match.completed || !match.score) return;
+        if (!match || !match.completed || !match.score) return;
         
-        const scoreA = match.score.teamAScore;
-        const scoreB = match.score.teamBScore;
+        const scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
+        const scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
         const diff = scoreA - scoreB;
         
         if (isIndividual) {
-          // Update Team A players
-          const idsA = [match.teamA.p1.id, match.teamA.p2.id];
+          if (!match.teamA || !match.teamB) return;
+          const p1A = match.teamA.p1 ? match.teamA.p1.id : null;
+          const p2A = match.teamA.p2 ? match.teamA.p2.id : null;
+          const idsA = [p1A, p2A].filter(Boolean);
+          
           idsA.forEach(id => {
             if (playerMap[id]) {
               playerMap[id].played += 1;
@@ -409,8 +439,10 @@ const StatsEngine = {
             }
           });
           
-          // Update Team B players
-          const idsB = [match.teamB.p1.id, match.teamB.p2.id];
+          const p1B = match.teamB.p1 ? match.teamB.p1.id : null;
+          const p2B = match.teamB.p2 ? match.teamB.p2.id : null;
+          const idsB = [p1B, p2B].filter(Boolean);
+          
           idsB.forEach(id => {
             if (playerMap[id]) {
               playerMap[id].played += 1;
@@ -422,10 +454,10 @@ const StatsEngine = {
           });
         } else {
           // Team Americano (fixed pairs, players list are actually teams)
-          const teamIdA = match.rawTeamA ? match.rawTeamA.id : match.teamA.p1.id;
-          const teamIdB = match.rawTeamB ? match.rawTeamB.id : match.teamB.p1.id;
+          const teamIdA = match.rawTeamA ? match.rawTeamA.id : (match.teamA && match.teamA.p1 ? match.teamA.p1.id : null);
+          const teamIdB = match.rawTeamB ? match.rawTeamB.id : (match.teamB && match.teamB.p1 ? match.teamB.p1.id : null);
           
-          if (playerMap[teamIdA]) {
+          if (teamIdA && playerMap[teamIdA]) {
             playerMap[teamIdA].played += 1;
             playerMap[teamIdA].points += scoreA;
             playerMap[teamIdA].diff += diff;
@@ -433,7 +465,7 @@ const StatsEngine = {
             else if (diff < 0) playerMap[teamIdA].lost += 1;
           }
           
-          if (playerMap[teamIdB]) {
+          if (teamIdB && playerMap[teamIdB]) {
             playerMap[teamIdB].played += 1;
             playerMap[teamIdB].points += scoreB;
             playerMap[teamIdB].diff -= diff;
@@ -446,9 +478,10 @@ const StatsEngine = {
     
     // Convert back to sorted array
     // Rank primary by Wins (for Tennis/Sets) or Points Tally (for Americano points)
+    const scoringMode = tournament.scoringMode || 'points';
     return Object.values(playerMap).sort((a, b) => {
       // In classic Americano, points won is primary. In sets/tennis, matches won/diff is primary.
-      if (tournament.scoringMode === 'tennis') {
+      if (scoringMode === 'tennis') {
         if (b.won !== a.won) return b.won - a.won; // Most match wins
         if (b.diff !== a.diff) return b.diff - a.diff; // Best game difference
         return b.points - a.points; // Most total points
@@ -498,7 +531,7 @@ function AppLayout({ tweaks, children, onBack, title, eyebrow, actions }) {
   );
 }
 
-Object.assign(window, { Icon, SpeechAnnouncer, Matchmaker, StatsEngine, AppLayout });
+Object.assign(window, { Icon, SpeechAnnouncer, Matchmaker, StatsEngine, AppLayout, getPlayerName, getTeamAPlayersString, getTeamBPlayersString });
 
 
 /* --- START FILE: dashboard.jsx --- */
@@ -1403,13 +1436,14 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
     );
   }
 
-  const currentRound = tournament.rounds[activeRoundIndex] || tournament.rounds[0];
-  const totalRounds = tournament.rounds.length;
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+  const totalRounds = rounds.length;
+  const currentRound = rounds[activeRoundIndex] || rounds[0] || { matches: [], sittingOut: [] };
 
   // Check if all matches in active round are finished
-  const roundMatches = currentRound.matches;
-  const finishedCount = roundMatches.filter(m => m.completed).length;
-  const isRoundFinished = finishedCount === roundMatches.length;
+  const roundMatches = currentRound.matches || [];
+  const finishedCount = roundMatches.filter(m => m && m.completed).length;
+  const isRoundFinished = roundMatches.length > 0 && finishedCount === roundMatches.length;
 
   // Smart checking if there are subsequent rounds to generate (e.g. for Mexicano)
   const isLastRound = activeRoundIndex === totalRounds - 1;
@@ -1457,7 +1491,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
           </button>
           
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0' }} className="ag-scroll">
-            {tournament.rounds.map((r, idx) => (
+            {rounds.map((r, idx) => (
               <button
                 key={idx}
                 className={`ag-pill ${activeRoundIndex === idx ? 'ag-pill-active' : ''}`}
@@ -1465,7 +1499,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 style={{ height: 28, fontSize: 11, whiteSpace: 'nowrap' }}
               >
                 Round {idx + 1}
-                {r.matches.every(m => m.completed) && <span style={{ marginLeft: 6, fontSize: 9 }}>✓</span>}
+                {r.matches && Array.isArray(r.matches) && r.matches.every(m => m && m.completed) && <span style={{ marginLeft: 6, fontSize: 9 }}>✓</span>}
               </button>
             ))}
           </div>
@@ -1494,9 +1528,12 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               {roundMatches.map((match, mIdx) => {
-                const hasScore = match.score !== null;
-                const scoreA = hasScore ? match.score.teamAScore : 0;
-                const scoreB = hasScore ? match.score.teamBScore : 0;
+                if (!match) return null;
+                const hasScore = match.score !== null && match.score !== undefined;
+                const score = match.score || {};
+                const scoreA = hasScore && score.teamAScore !== undefined ? score.teamAScore : 0;
+                const scoreB = hasScore && score.teamBScore !== undefined ? score.teamBScore : 0;
+                const sets = score.sets || [];
                 
                 return (
                   <div 
@@ -1522,13 +1559,13 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreA >= scoreB && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
-                            {match.teamA.p2.name ? `${match.teamA.p1.name} + ${match.teamA.p2.name}` : match.teamA.p1.name}
+                            {getTeamAPlayersString(match)}
                           </span>
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>vs</div>
                         <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span style={{ color: scoreB >= scoreA && hasScore ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
-                            {match.teamB.p2.name ? `${match.teamB.p1.name} + ${match.teamB.p2.name}` : match.teamB.p1.name}
+                            {getTeamBPlayersString(match)}
                           </span>
                         </div>
                       </div>
@@ -1542,7 +1579,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                           {tournament.scoringMode === 'tennis' ? (
                             /* Traditional Sets view */
                             <div style={{ display: 'flex', gap: 4 }}>
-                              {match.score.sets && match.score.sets.map((set, sIdx) => (
+                              {sets.map((set, sIdx) => (
                                 <div key={sIdx} className="ag-inset" style={{ padding: '4px 8px', fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 600 }}>
                                   {set.teamA} - {set.teamB}
                                 </div>
@@ -1550,7 +1587,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                               {/* Live Score if in-progress */}
                               {!match.completed && (
                                 <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4 }}>
-                                  {match.score.teamAScore} - {match.score.teamBScore}
+                                  {scoreA} - {scoreB}
                                 </div>
                               )}
                             </div>
@@ -1620,7 +1657,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 currentRound.sittingOut.map((p, pIdx) => (
                   <div key={pIdx} className="ag-inset" style={{ padding: '8px 10px', fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
                     <span className="ag-dot" style={{ background: 'var(--text-tertiary)' }} />
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ fontWeight: 500 }}>{p && typeof p === 'object' ? p.name : p || 'Unknown'}</span>
                   </div>
                 ))
               ) : (
@@ -2192,9 +2229,11 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
   // Tally leaderboard from active matches
   const standings = StatsEngine.tallyTournament(tournament);
 
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+
   // Check if tournament is ready to finalize (all matches completed)
-  const allMatchesCompleted = tournament.rounds.every(round => 
-    round.matches.every(match => match.completed)
+  const allMatchesCompleted = rounds.length > 0 && rounds.every(round => 
+    round.matches && round.matches.every(match => match && match.completed)
   );
 
   // TV Cast Widescreen Layout
@@ -2307,21 +2346,22 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
             </h3>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }} className="ag-scroll">
-              {tournament.rounds.map((round, rIdx) => (
+              {rounds.map((round, rIdx) => (
                 <div key={rIdx} className="ag-inset" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', borderBottom: '1px solid var(--hairline-soft)', paddingBottom: 4 }}>
                     {round.name}
                   </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {round.matches.map((match, mIdx) => {
+                    {round.matches && round.matches.map((match, mIdx) => {
+                      if (!match) return null;
                       const scoreA = match.score ? match.score.teamAScore : 0;
                       const scoreB = match.score ? match.score.teamBScore : 0;
                       
                       return (
                         <div key={mIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                           <span style={{ color: 'var(--text-secondary)' }}>
-                            Crt {match.court}: {match.teamA.p1.name} {match.teamA.p2.name && `+ ${match.teamA.p2.name}`} vs {match.teamB.p1.name} {match.teamB.p2.name && `+ ${match.teamB.p2.name}`}
+                            Crt {match.court}: {getTeamAPlayersString(match)} vs {getTeamBPlayersString(match)}
                           </span>
                           
                           {match.completed ? (
@@ -2471,7 +2511,8 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
 window.LeaderboardScreen = LeaderboardScreen;
 
 
-/* --- START FILE: index.html block --- */
+/* --- START FILE: app.jsx --- */
+/* screens/app.jsx — Central App Container & Tweak Presets Showcase */
 
 // Hook to manage reactive styling tweaks, matching fnb-agent tweak systems
 function useTweaks(defaultVal) {
@@ -2540,12 +2581,23 @@ function App() {
       
       const savedActive = localStorage.getItem('padel_active_tournament');
       if (savedActive) {
-        setActiveTournament(JSON.parse(savedActive));
-        // Auto-resume to active-matches if tournament exists
-        setCurrentScreen('active-matches');
+        const parsed = JSON.parse(savedActive);
+        // Self-Healing Bootloader Check:
+        // Ensure parsed tournament exists and has a valid rounds array.
+        // If it's legacy data without rounds, we purge it cleanly rather than crashing.
+        if (parsed && Array.isArray(parsed.rounds)) {
+          setActiveTournament(parsed);
+          setCurrentScreen('active-matches');
+        } else {
+          console.warn("Detected legacy/corrupt active tournament state. Purging automatically.");
+          localStorage.removeItem('padel_active_tournament');
+        }
       }
     } catch(e) {
       console.error("Failed loading data from localStorage", e);
+      try {
+        localStorage.removeItem('padel_active_tournament');
+      } catch(_) {}
     }
   }, []);
 
@@ -2577,161 +2629,201 @@ function App() {
   };
 
   // Renders the main active screen in Fullscreen App Mode
+  // Safeguarded with a robust try/catch UI block to eliminate blank screens
   const renderActiveScreen = () => {
-    switch (currentScreen) {
-      case 'dashboard':
-        return (
-          <DashboardScreen 
-            tweaks={tweaks}
-            tournamentHistory={tournamentHistory}
-            activeTournament={activeTournament}
-            onNewTournament={() => setCurrentScreen('setup')}
-            onResumeTournament={() => setCurrentScreen('active-matches')}
-            onQuickMatch={() => {
-              // Initiate a standalone default match structure
-              setActiveMatch({
-                sport: 'padel',
-                teamA: ['Player 1', 'Player 2'],
-                teamB: ['Player 3', 'Player 4'],
-                scoringMode: 'tennis',
-                rules: {
-                  setsFormat: 'best3', // best3, best4, best5, first3
-                  advantageRule: 'goldenPoint',
-                  tiebreakerTarget: 7
-                },
-                score: {
-                  teamAScore: 0,
-                  teamBScore: 0,
-                  sets: [] // array of {teamA: number, teamB: number}
-                },
-                serving: 'teamA',
-                serverIndex: 0,
-                history: [],
-                completed: false
-              });
-              setCurrentScreen('interactive-scorer');
-            }}
-            onViewHistory={(tourney) => {
-              // Open finalized scoreboard/rankings
-              setActiveTournament(tourney);
-              setCurrentScreen('leaderboard');
-            }}
-          />
-        );
-      case 'setup':
-        return (
-          <SetupScreen 
-            tweaks={tweaks}
-            onBack={handleBackToDashboard}
-            onStart={handleStartTournament}
-          />
-        );
-      case 'active-matches':
-        return (
-          <ActiveMatchesScreen 
-            tweaks={tweaks}
-            tournament={activeTournament}
-            onBack={handleBackToDashboard}
-            onCancelTournament={() => {
-              if (confirm("Are you sure you want to end this tournament? Standings will be lost.")) {
+    try {
+      switch (currentScreen) {
+        case 'dashboard':
+          return (
+            <DashboardScreen 
+              tweaks={tweaks}
+              tournamentHistory={tournamentHistory}
+              activeTournament={activeTournament}
+              onNewTournament={() => setCurrentScreen('setup')}
+              onResumeTournament={() => setCurrentScreen('active-matches')}
+              onQuickMatch={() => {
+                // Initiate a standalone default match structure
+                setActiveMatch({
+                  sport: 'padel',
+                  teamA: ['Player 1', 'Player 2'],
+                  teamB: ['Player 3', 'Player 4'],
+                  scoringMode: 'tennis',
+                  rules: {
+                    setsFormat: 'best3', // best3, best4, best5, first3
+                    advantageRule: 'goldenPoint',
+                    tiebreakerTarget: 7
+                  },
+                  score: {
+                    teamAScore: 0,
+                    teamBScore: 0,
+                    sets: [] // array of {teamA: number, teamB: number}
+                  },
+                  serving: 'teamA',
+                  serverIndex: 0,
+                  history: [],
+                  completed: false
+                });
+                setCurrentScreen('interactive-scorer');
+              }}
+              onViewHistory={(tourney) => {
+                // Open finalized scoreboard/rankings
+                setActiveTournament(tourney);
+                setCurrentScreen('leaderboard');
+              }}
+            />
+          );
+        case 'setup':
+          return (
+            <SetupScreen 
+              tweaks={tweaks}
+              onBack={handleBackToDashboard}
+              onStart={handleStartTournament}
+            />
+          );
+        case 'active-matches':
+          return (
+            <ActiveMatchesScreen 
+              tweaks={tweaks}
+              tournament={activeTournament}
+              onBack={handleBackToDashboard}
+              onCancelTournament={() => {
+                if (confirm("Are you sure you want to end this tournament? Standings will be lost.")) {
+                  updateTournamentState(null);
+                  setCurrentScreen('dashboard');
+                }
+              }}
+              onSelectMatch={(match, roundIndex, matchIndex) => {
+                // Launch Scorer for this specific tournament match
+                setActiveTournamentMatch({ roundIndex, matchIndex });
+                
+                // Map tournament match to activeMatch structure
+                const playersA = [match.teamA.p1, match.teamA.p2];
+                const playersB = [match.teamB.p1, match.teamB.p2];
+                
+                setActiveMatch({
+                  isTournament: true,
+                  sport: activeTournament.sport,
+                  teamA: playersA,
+                  teamB: playersB,
+                  scoringMode: activeTournament.scoringMode, // 'points' or 'tennis'
+                  rules: activeTournament.rules,
+                  score: match.score || {
+                    teamAScore: 0,
+                    teamBScore: 0,
+                    sets: []
+                  },
+                  serving: 'teamA',
+                  serverIndex: 0,
+                  history: [],
+                  completed: match.completed
+                });
+                setCurrentScreen('interactive-scorer');
+              }}
+              onViewLeaderboard={() => setCurrentScreen('leaderboard')}
+            />
+          );
+        case 'interactive-scorer':
+          return (
+            <InteractiveScorerScreen 
+              tweaks={tweaks}
+              match={activeMatch}
+              onBack={() => {
+                if (activeMatch.isTournament) {
+                  setCurrentScreen('active-matches');
+                } else {
+                  setCurrentScreen('dashboard');
+                }
+                setActiveMatch(null);
+                setActiveTournamentMatch(null);
+              }}
+              onSaveMatch={(finalScore, completed) => {
+                if (activeMatch.isTournament) {
+                  // Return score to tournament state
+                  const { roundIndex, matchIndex } = activeTournamentMatch;
+                  const copy = { ...activeTournament };
+                  
+                  // Update match score
+                  copy.rounds[roundIndex].matches[matchIndex].score = finalScore;
+                  copy.rounds[roundIndex].matches[matchIndex].completed = completed;
+                  
+                  // If the round is finished, update standings
+                  // Simple auto-save
+                  updateTournamentState(copy);
+                  setCurrentScreen('active-matches');
+                } else {
+                  // Standalone match save
+                  alert("Match score updated/saved locally!");
+                  setCurrentScreen('dashboard');
+                }
+                setActiveMatch(null);
+                setActiveTournamentMatch(null);
+              }}
+            />
+          );
+        case 'leaderboard':
+          return (
+            <LeaderboardScreen 
+              tweaks={tweaks}
+              tournament={activeTournament}
+              onBack={() => {
+                if (activeTournament && !activeTournament.completed) {
+                  setCurrentScreen('active-matches');
+                } else {
+                  setCurrentScreen('dashboard');
+                }
+              }}
+              onFinishTournament={() => {
+                if (confirm("Are you sure you want to finish this tournament? Standings will be finalized and archived.")) {
+                  const finished = { ...activeTournament, completed: true, finishedAt: new Date().toISOString() };
+                  const newHist = [finished, ...tournamentHistory];
+                  setTournamentHistory(newHist);
+                  localStorage.setItem('padel_tournament_history', JSON.stringify(newHist));
+                  updateTournamentState(null);
+                  setCurrentScreen('dashboard');
+                }
+              }}
+            />
+          );
+        default:
+          return <div className="ag-body" style={{ padding: 20 }}>Screen not found.</div>;
+      }
+    } catch (err) {
+      console.error("Render crash caught:", err);
+      return (
+        <div className="ag-body" style={{ padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="ag-card" style={{
+            padding: 24, maxWidth: 500, width: '100%',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(0, 0, 0, 0.4))',
+            border: '1px solid var(--danger)', borderRadius: 12,
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <h2 className="ag-h2" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 10px' }}>
+              <Icon name="alert-triangle" color="var(--danger)" /> View Crash Safeguard
+            </h2>
+            <p className="ag-body" style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.4 }}>
+              A dynamic rendering error occurred while loading this view. You can return to the main dashboard or clear the current tournament state to recover.
+            </p>
+            <div className="ag-inset" style={{
+              padding: 12, fontFamily: 'JetBrains Mono', fontSize: 11,
+              background: 'rgba(0,0,0,0.3)', marginBottom: 20,
+              overflowX: 'auto', whiteSpace: 'pre-wrap', maxHeight: 200, color: 'rgba(255,255,255,0.9)'
+            }}>
+              {err.stack || err.message || String(err)}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="ag-btn ag-btn-primary ag-btn-sm" onClick={() => setCurrentScreen('dashboard')}>
+                Go to Dashboard
+              </button>
+              <button className="ag-btn ag-btn-ghost ag-btn-sm" style={{ color: 'var(--danger)' }} onClick={() => {
                 updateTournamentState(null);
                 setCurrentScreen('dashboard');
-              }
-            }}
-            onSelectMatch={(match, roundIndex, matchIndex) => {
-              // Launch Scorer for this specific tournament match
-              setActiveTournamentMatch({ roundIndex, matchIndex });
-              
-              // Map tournament match to activeMatch structure
-              const playersA = [match.teamA.p1, match.teamA.p2];
-              const playersB = [match.teamB.p1, match.teamB.p2];
-              
-              setActiveMatch({
-                isTournament: true,
-                sport: activeTournament.sport,
-                teamA: playersA,
-                teamB: playersB,
-                scoringMode: activeTournament.scoringMode, // 'points' or 'tennis'
-                rules: activeTournament.rules,
-                score: match.score || {
-                  teamAScore: 0,
-                  teamBScore: 0,
-                  sets: []
-                },
-                serving: 'teamA',
-                serverIndex: 0,
-                history: [],
-                completed: match.completed
-              });
-              setCurrentScreen('interactive-scorer');
-            }}
-            onViewLeaderboard={() => setCurrentScreen('leaderboard')}
-          />
-        );
-      case 'interactive-scorer':
-        return (
-          <InteractiveScorerScreen 
-            tweaks={tweaks}
-            match={activeMatch}
-            onBack={() => {
-              if (activeMatch.isTournament) {
-                setCurrentScreen('active-matches');
-              } else {
-                setCurrentScreen('dashboard');
-              }
-              setActiveMatch(null);
-              setActiveTournamentMatch(null);
-            }}
-            onSaveMatch={(finalScore, completed) => {
-              if (activeMatch.isTournament) {
-                // Return score to tournament state
-                const { roundIndex, matchIndex } = activeTournamentMatch;
-                const copy = { ...activeTournament };
-                
-                // Update match score
-                copy.rounds[roundIndex].matches[matchIndex].score = finalScore;
-                copy.rounds[roundIndex].matches[matchIndex].completed = completed;
-                
-                // If the round is finished, update standings
-                // Simple auto-save
-                updateTournamentState(copy);
-                setCurrentScreen('active-matches');
-              } else {
-                // Standalone match save
-                alert("Match score updated/saved locally!");
-                setCurrentScreen('dashboard');
-              }
-              setActiveMatch(null);
-              setActiveTournamentMatch(null);
-            }}
-          />
-        );
-      case 'leaderboard':
-        return (
-          <LeaderboardScreen 
-            tweaks={tweaks}
-            tournament={activeTournament}
-            onBack={() => {
-              if (activeTournament && !activeTournament.completed) {
-                setCurrentScreen('active-matches');
-              } else {
-                setCurrentScreen('dashboard');
-              }
-            }}
-            onFinishTournament={() => {
-              if (confirm("Are you sure you want to finish this tournament? Standings will be finalized and archived.")) {
-                const finished = { ...activeTournament, completed: true, finishedAt: new Date().toISOString() };
-                const newHist = [finished, ...tournamentHistory];
-                setTournamentHistory(newHist);
-                localStorage.setItem('padel_tournament_history', JSON.stringify(newHist));
-                updateTournamentState(null);
-                setCurrentScreen('dashboard');
-              }
-            }}
-          />
-        );
-      default:
-        return <div className="ag-body" style={{ padding: 20 }}>Screen not found.</div>;
+              }}>
+                Reset Active Tournament
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
   };
 
@@ -2918,4 +3010,5 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
 
