@@ -191,12 +191,39 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     const totalPts = nextA + nextB;
     const ptsLimit = match.rules.pointsLimit || 24;
 
-    // Service alternates every 4 points in classic Americano
-    if (totalPts % 4 === 0 && totalPts < ptsLimit) {
-      const { nextServ, nextIdx } = rotateServer(serving, serverIndex);
-      setServing(nextServ);
-      setServerIndex(nextIdx);
-      SpeechAnnouncer.speak(tweaks.refereeVoice.startsWith('es') ? "Cambio de servicio" : "Service change", tweaks.refereeVoice);
+    // Service alternates based on mathematically balanced turns for 4 players (total limits L / 4)
+    const servesPerTurn = Math.floor(ptsLimit / 4);
+    let nextServing = 'teamA';
+    let nextServerIndex = 0;
+
+    if (totalPts < 4 * servesPerTurn) {
+      const turn = Math.floor(totalPts / servesPerTurn);
+      if (turn === 0) {
+        nextServing = 'teamA';
+        nextServerIndex = 0;
+      } else if (turn === 1) {
+        nextServing = 'teamB';
+        nextServerIndex = 0;
+      } else if (turn === 2) {
+        nextServing = 'teamA';
+        nextServerIndex = 1;
+      } else if (turn === 3) {
+        nextServing = 'teamB';
+        nextServerIndex = 1;
+      }
+    } else {
+      // Remaining points served by the first person to serve
+      nextServing = 'teamA';
+      nextServerIndex = 0;
+    }
+
+    const serviceChanged = nextServing !== serving || nextServerIndex !== serverIndex;
+    if (serviceChanged) {
+      setServing(nextServing);
+      setServerIndex(nextServerIndex);
+      if (totalPts < ptsLimit) {
+        SpeechAnnouncer.speak(tweaks.refereeVoice.startsWith('es') ? "Cambio de servicio" : "change serve", tweaks.refereeVoice);
+      }
     }
 
     // Call Vocal referee to read score aloud
