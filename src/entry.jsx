@@ -1481,6 +1481,15 @@ window.SetupScreen = SetupScreen;
 function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard, onEditTournament }) {
   const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
 
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+  const totalRounds = rounds.length;
+
+  React.useEffect(() => {
+    if (activeRoundIndex >= totalRounds && totalRounds > 0) {
+      setActiveRoundIndex(totalRounds - 1);
+    }
+  }, [totalRounds, activeRoundIndex]);
+
   if (!tournament) {
     return (
       <div className="ag-body" style={{ padding: 24, textAlign: 'center' }}>
@@ -1491,8 +1500,6 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
     );
   }
 
-  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
-  const totalRounds = rounds.length;
   const currentRound = rounds[activeRoundIndex] || rounds[0] || { matches: [], sittingOut: [] };
 
   // Check if all matches in active round are finished
@@ -1769,23 +1776,77 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   const [successMessage, setSuccessMessage] = React.useState('');
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Automatically re-distribute pending matches across the new court amount
+  // Automatically restructure rounds and re-distribute pending matches across the new court amount
   // ──────────────────────────────────────────────────────────────────────────
   const handleCourtsCountChange = (newCount) => {
     const count = parseInt(newCount) || 1;
     setCourtsCount(count);
     
-    const updatedRounds = rounds.map(round => {
-      let pendingMatchIdx = 0;
-      const updatedMatches = round.matches.map(match => {
-        if (match.completed) return match;
-        const assignedCourt = (pendingMatchIdx % count) + 1;
-        pendingMatchIdx++;
-        return { ...match, court: assignedCourt };
+    // 1. Separate completed matches and collect all pending matches chronologically
+    const completedMatchesByRound = [];
+    const pendingMatches = [];
+    
+    rounds.forEach((round) => {
+      const completed = [];
+      round.matches.forEach(match => {
+        if (match.completed) {
+          completed.push(match);
+        } else {
+          pendingMatches.push(match);
+        }
       });
-      return { ...round, matches: updatedMatches };
+      completedMatchesByRound.push(completed);
     });
-    setRounds(updatedRounds);
+    
+    // 2. Re-allocate pending matches into new rounds of size `count`
+    const newRounds = [];
+    let pendingIdx = 0;
+    let rIdx = 0;
+    
+    while (rIdx < completedMatchesByRound.length || pendingIdx < pendingMatches.length) {
+      const roundMatches = [];
+      
+      // Keep any completed matches that belonged to this round index originally
+      if (rIdx < completedMatchesByRound.length) {
+        roundMatches.push(...completedMatchesByRound[rIdx]);
+      }
+      
+      // Fill the remaining court slots in this round with pending matches
+      const emptySlots = count - roundMatches.length;
+      for (let s = 0; s < emptySlots; s++) {
+        if (pendingIdx >= pendingMatches.length) break;
+        const match = pendingMatches[pendingIdx];
+        pendingIdx++;
+        
+        // Find next available court number (1-based) not taken by a completed match in this round
+        let courtNum = 1;
+        while (roundMatches.some(m => m.court === courtNum)) {
+          courtNum++;
+        }
+        
+        roundMatches.push({
+          ...match,
+          court: courtNum
+        });
+      }
+      
+      if (roundMatches.length > 0) {
+        // Recalculate sitting out list for this round
+        const sittingOut = getRecalculatedSittingOut(roundMatches, players);
+        
+        newRounds.push({
+          roundIndex: rIdx,
+          name: `Round ${rIdx + 1}`,
+          matches: roundMatches,
+          sittingOut: sittingOut
+        });
+        rIdx++;
+      } else {
+        break;
+      }
+    }
+    
+    setRounds(newRounds);
   };
 
   // ──────────────────────────────────────────────────────────────────────────

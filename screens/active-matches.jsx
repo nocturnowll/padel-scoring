@@ -3,6 +3,15 @@
 function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard, onEditTournament }) {
   const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
 
+  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
+  const totalRounds = rounds.length;
+
+  React.useEffect(() => {
+    if (activeRoundIndex >= totalRounds && totalRounds > 0) {
+      setActiveRoundIndex(totalRounds - 1);
+    }
+  }, [totalRounds, activeRoundIndex]);
+
   if (!tournament) {
     return (
       <div className="ag-body" style={{ padding: 24, textAlign: 'center' }}>
@@ -13,8 +22,6 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
     );
   }
 
-  const rounds = tournament && tournament.rounds ? tournament.rounds : [];
-  const totalRounds = rounds.length;
   const currentRound = rounds[activeRoundIndex] || rounds[0] || { matches: [], sittingOut: [] };
 
   // Check if all matches in active round are finished
