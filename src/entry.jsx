@@ -394,6 +394,7 @@ const StatsEngine = {
     
     const format = tournament.format || 'individual_americano';
     const isIndividual = format.includes('individual') || format === 'mexicano';
+    const scoringMode = tournament.scoringMode || 'points';
     
     // Reset player scores
     const playerMap = {};
@@ -407,21 +408,58 @@ const StatsEngine = {
         diff: 0,
         played: 0,
         won: 0,
-        lost: 0,
-        rawWins: 0, // matches won
+        lost: 0
       };
     });
     
-    // Process all rounds and finished matches
+    // Process all rounds and matches
     const rounds = tournament.rounds || [];
     rounds.forEach(round => {
       if (!round || !round.matches) return;
       round.matches.forEach(match => {
-        if (!match || !match.completed || !match.score) return;
+        if (!match || !match.score) return;
         
-        const scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
-        const scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
+        let scoreA = 0;
+        let scoreB = 0;
+        
+        if (scoringMode === 'tennis') {
+          // Tennis Sets: points and difference are tallied based on total games won!
+          // We sum the games from all completed sets in the sets array, plus current active set games.
+          const sets = match.score.sets || [];
+          let gamesA = 0;
+          let gamesB = 0;
+          sets.forEach(s => {
+            gamesA += s.teamA || 0;
+            gamesB += s.teamB || 0;
+          });
+          gamesA += match.score.currentGameA || 0;
+          gamesB += match.score.currentGameB || 0;
+          
+          scoreA = gamesA;
+          scoreB = gamesB;
+        } else {
+          // Raw points Americano: points and difference are raw points scored
+          scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
+          scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
+        }
+        
         const diff = scoreA - scoreB;
+        
+        // Helper to update player stats
+        const updatePlayerStats = (id, pointsToAdd, diffToAdd, isMatchCompleted, isMatchWon) => {
+          if (playerMap[id]) {
+            playerMap[id].points += pointsToAdd;
+            playerMap[id].diff += diffToAdd;
+            if (isMatchCompleted) {
+              playerMap[id].played += 1;
+              if (isMatchWon) {
+                playerMap[id].won += 1;
+              } else {
+                playerMap[id].lost += 1;
+              }
+            }
+          }
+        };
         
         if (isIndividual) {
           if (!match.teamA || !match.teamB) return;
@@ -429,58 +467,73 @@ const StatsEngine = {
           const p2A = match.teamA.p2 ? match.teamA.p2.id : null;
           const idsA = [p1A, p2A].filter(Boolean);
           
-          idsA.forEach(id => {
-            if (playerMap[id]) {
-              playerMap[id].played += 1;
-              playerMap[id].points += scoreA;
-              playerMap[id].diff += diff;
-              if (diff > 0) playerMap[id].won += 1;
-              else if (diff < 0) playerMap[id].lost += 1;
-            }
-          });
-          
           const p1B = match.teamB.p1 ? match.teamB.p1.id : null;
           const p2B = match.teamB.p2 ? match.teamB.p2.id : null;
           const idsB = [p1B, p2B].filter(Boolean);
           
-          idsB.forEach(id => {
-            if (playerMap[id]) {
-              playerMap[id].played += 1;
-              playerMap[id].points += scoreB;
-              playerMap[id].diff -= diff;
-              if (diff < 0) playerMap[id].won += 1;
-              else if (diff > 0) playerMap[id].lost += 1;
+          // Determine who won the match overall
+          let isWonA = false;
+          let isWonB = false;
+          
+          if (match.completed) {
+            if (scoringMode === 'tennis') {
+              // Count sets won
+              let setsWonA = 0;
+              let setsWonB = 0;
+              (match.score.sets || []).forEach(s => {
+                if (s.teamA > s.teamB) setsWonA += 1;
+                else if (s.teamB > s.teamA) setsWonB += 1;
+              });
+              isWonA = setsWonA > setsWonB;
+              isWonB = setsWonB > setsWonA;
+            } else {
+              isWonA = scoreA > scoreB;
+              isWonB = scoreB > scoreA;
             }
+          }
+          
+          idsA.forEach(id => {
+            updatePlayerStats(id, scoreA, diff, match.completed, isWonA);
+          });
+          idsB.forEach(id => {
+            updatePlayerStats(id, scoreB, -diff, match.completed, isWonB);
           });
         } else {
-          // Team Americano (fixed pairs, players list are actually teams)
+          // Team Americano
           const teamIdA = match.rawTeamA ? match.rawTeamA.id : (match.teamA && match.teamA.p1 ? match.teamA.p1.id : null);
           const teamIdB = match.rawTeamB ? match.rawTeamB.id : (match.teamB && match.teamB.p1 ? match.teamB.p1.id : null);
           
-          if (teamIdA && playerMap[teamIdA]) {
-            playerMap[teamIdA].played += 1;
-            playerMap[teamIdA].points += scoreA;
-            playerMap[teamIdA].diff += diff;
-            if (diff > 0) playerMap[teamIdA].won += 1;
-            else if (diff < 0) playerMap[teamIdA].lost += 1;
+          let isWonA = false;
+          let isWonB = false;
+          
+          if (match.completed) {
+            if (scoringMode === 'tennis') {
+              let setsWonA = 0;
+              let setsWonB = 0;
+              (match.score.sets || []).forEach(s => {
+                if (s.teamA > s.teamB) setsWonA += 1;
+                else if (s.teamB > s.teamA) setsWonB += 1;
+              });
+              isWonA = setsWonA > setsWonB;
+              isWonB = setsWonB > setsWonA;
+            } else {
+              isWonA = scoreA > scoreB;
+              isWonB = scoreB > scoreA;
+            }
           }
           
-          if (teamIdB && playerMap[teamIdB]) {
-            playerMap[teamIdB].played += 1;
-            playerMap[teamIdB].points += scoreB;
-            playerMap[teamIdB].diff -= diff;
-            if (diff < 0) playerMap[teamIdB].won += 1;
-            else if (diff > 0) playerMap[teamIdB].lost += 1;
+          if (teamIdA) {
+            updatePlayerStats(teamIdA, scoreA, diff, match.completed, isWonA);
+          }
+          if (teamIdB) {
+            updatePlayerStats(teamIdB, scoreB, -diff, match.completed, isWonB);
           }
         }
       });
     });
     
     // Convert back to sorted array
-    // Rank primary by Wins (for Tennis/Sets) or Points Tally (for Americano points)
-    const scoringMode = tournament.scoringMode || 'points';
     return Object.values(playerMap).sort((a, b) => {
-      // In classic Americano, points won is primary. In sets/tennis, matches won/diff is primary.
       if (scoringMode === 'tennis') {
         if (b.won !== a.won) return b.won - a.won; // Most match wins
         if (b.diff !== a.diff) return b.diff - a.diff; // Best game difference
@@ -793,6 +846,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
   // Scoring rules
   const [pointsLimit, setPointsLimit] = React.useState(24); // 16, 24, 32, 40 points
   const [setsFormat, setSetsFormat] = React.useState('best3'); // 'best3', 'best4', 'best5', 'first3'
+  const [gamesPerSet, setGamesPerSet] = React.useState(6); // 4, 5, 6, 8 games target
   const [advantageRule, setAdvantageRule] = React.useState('goldenPoint'); // 'goldenPoint', 'deuce'
   const [tiebreakerTarget, setTiebreakerTarget] = React.useState(7); // 7, 10
   const [isCustomPoints, setIsCustomPoints] = React.useState(false);
@@ -852,7 +906,8 @@ function SetupScreen({ tweaks, onBack, onStart }) {
     const rules = {
       setsFormat,
       advantageRule,
-      tiebreakerTarget
+      tiebreakerTarget,
+      gamesPerSet
     };
     
     if (format === 'individual_americano') {
@@ -1165,6 +1220,27 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
                     {setsFormat === 'best4' && "Best of 4 sets allows matches to end in a 2-2 tie. Points are tallies of total games/points won."}
                     {setsFormat === 'first3' && "Match finishes immediately when a side achieves 3 set wins (equivalent to best of 5, but speedier)."}
+                  </div>
+                </div>
+
+                {/* Games per Set */}
+                <div>
+                  <label className="ag-label">Games per Set (Set Target)</label>
+                  <div className="ag-sets-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                    {[4, 5, 6, 8].map(g => (
+                      <button 
+                        key={g}
+                        type="button"
+                        className={`ag-pill ${gamesPerSet === g ? 'ag-pill-active' : ''}`}
+                        onClick={() => setGamesPerSet(g)}
+                        style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', textAlign: 'center', fontSize: 11 }}
+                      >
+                        {g === 4 ? '4 (Short)' : g === 6 ? '6 (Standard)' : g === 8 ? '8 (Pro)' : `${g} games`}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                    Select how many games a team needs to win to claim a set (2-game margin applies).
                   </div>
                 </div>
 
@@ -1700,15 +1776,15 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   const [teamAScore, setTeamAScore] = React.useState(match.score.teamAScore || 0);
   const [teamBScore, setTeamBScore] = React.useState(match.score.teamBScore || 0);
   const [sets, setSets] = React.useState(match.score.sets ? [...match.score.sets] : []);
-  const [serving, setServing] = React.useState(match.serving || 'teamA');
-  const [serverIndex, setServerIndex] = React.useState(match.serverIndex || 0);
+  const [serving, setServing] = React.useState(match.serving || match.score.serving || 'teamA');
+  const [serverIndex, setServerIndex] = React.useState(match.serverIndex !== undefined ? match.serverIndex : (match.score.serverIndex !== undefined ? match.score.serverIndex : 0));
   
   // Game & Tiebreak sub-states
-  const [currentGameA, setCurrentGameA] = React.useState(0); // active games in active set
-  const [currentGameB, setCurrentGameB] = React.useState(0);
-  const [isTiebreaker, setIsTiebreaker] = React.useState(false);
-  const [tiebreakScoreA, setTiebreakScoreA] = React.useState(0);
-  const [tiebreakScoreB, setTiebreakScoreB] = React.useState(0);
+  const [currentGameA, setCurrentGameA] = React.useState(match.score.currentGameA || 0); // active games in active set
+  const [currentGameB, setCurrentGameB] = React.useState(match.score.currentGameB || 0);
+  const [isTiebreaker, setIsTiebreaker] = React.useState(match.score.isTiebreaker || false);
+  const [tiebreakScoreA, setTiebreakScoreA] = React.useState(match.score.tiebreakScoreA || 0);
+  const [tiebreakScoreB, setTiebreakScoreB] = React.useState(match.score.tiebreakScoreB || 0);
 
   // Undo/Redo Stack
   const [history, setHistory] = React.useState([]);
@@ -1717,6 +1793,33 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   // Match Timer
   const [elapsed, setElapsed] = React.useState(0);
   const [timerActive, setTimerActive] = React.useState(true);
+  
+  const isMountedRef = React.useRef(false);
+
+  // Auto-Save after every single scoring input in background
+  React.useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    
+    if (match.completed) return;
+    
+    const currentScore = {
+      teamAScore: isTiebreaker ? tiebreakScoreA : teamAScore,
+      teamBScore: isTiebreaker ? tiebreakScoreB : teamBScore,
+      sets: sets,
+      currentGameA,
+      currentGameB,
+      isTiebreaker,
+      serving,
+      serverIndex,
+      tiebreakScoreA,
+      tiebreakScoreB
+    };
+    
+    onSaveMatch(currentScore, false); // completed = false (silent sync)
+  }, [teamAScore, teamBScore, sets, currentGameA, currentGameB, isTiebreaker, tiebreakScoreA, tiebreakScoreB, serving, serverIndex]);
 
   React.useEffect(() => {
     let interval = null;
@@ -1995,18 +2098,30 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     setServing(nextServ);
     setServerIndex(nextIdx);
 
+    const gamesTarget = match.rules.gamesPerSet || 6;
+    const tiebreakTrigger = gamesTarget <= 5 ? gamesTarget - 1 : gamesTarget;
+
     // Set Win verification
     const checkSetWon = (gamesWon, gamesLost) => {
       if (fromTiebreak) return true;
-      if (gamesWon >= 6 && gamesWon - gamesLost >= 2) return true;
-      return false;
+      
+      if (gamesTarget <= 5) {
+        // Short sets (4 or 5 games): win as soon as you reach the target games count (no 2-game lead needed, e.g. 4-3 or 5-4 is a win)
+        return gamesWon >= gamesTarget;
+      } else {
+        // Standard sets (6 or 8 games): require a 2-game lead (e.g. 6-4, 7-5)
+        if (gamesWon >= gamesTarget && gamesWon - gamesLost >= 2) return true;
+        // In standard sets, if you reach gamesTarget + 1 and have a 2-game lead (e.g. 7-5 in a 6-game set)
+        if (gamesWon > gamesTarget && gamesWon - gamesLost >= 2) return true;
+        return false;
+      }
     };
 
     if (checkSetWon(nextG_A, nextG_B)) {
       winSet(nextG_A, nextG_B);
     } else if (checkSetWon(nextG_B, nextG_A)) {
       winSet(nextG_A, nextG_B);
-    } else if (nextG_A === 6 && nextG_B === 6) {
+    } else if (nextG_A === tiebreakTrigger && nextG_B === tiebreakTrigger) {
       // Launch Tiebreaker!
       setIsTiebreaker(true);
       SpeechAnnouncer.speak(tweaks.refereeVoice.startsWith('es') ? "Muerte súbita" : "Tiebreak", tweaks.refereeVoice);
@@ -2028,10 +2143,11 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
       else setsWonB += 1;
     });
 
+    const setWinner = finalGamesA > finalGamesB ? 'A' : 'B';
     SpeechAnnouncer.speak(
       tweaks.refereeVoice.startsWith('es') 
-        ? `Set para el Equipo ${setsWonA > setsWonB ? 'A' : 'B'}` 
-        : `Set won by Team ${setsWonA > setsWonB ? 'A' : 'B'}`, 
+        ? `Set para el Equipo ${setWinner}` 
+        : `Set won by Team ${setWinner}`, 
       tweaks.refereeVoice
     );
 
@@ -2080,9 +2196,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
       tweaks={tweaks}
       title={`${match.sport === 'padel' ? 'Padel' : 'Tennis'} Court Umpire`}
       eyebrow={match.isTournament ? "Tournament Scorer" : "Standalone Scorer"}
-      onBack={() => {
-        if (confirm("Go back? Unsaved scores will be lost.")) onBack();
-      }}
+      onBack={onBack}
       actions={
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <span style={{ fontSize: 11.5, fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)' }} className="ag-inset">
@@ -2093,9 +2207,6 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
           </button>
           <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={handleRedo} disabled={redoStack.length === 0} style={{ padding: 8 }}>
             <Icon name="redo-2" size={15} />
-          </button>
-          <button className="ag-btn ag-btn-primary ag-btn-sm" onClick={() => handleSave(teamAScore, teamBScore, false)}>
-            Save Progress
           </button>
         </div>
       }
@@ -2195,7 +2306,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
         {/* Match Rule Summary Panel */}
         <div className="ag-card" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)' }}>
           <div>
-            Format: {match.scoringMode === 'points' ? `Points target: ${match.rules.pointsLimit} pts` : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'}`}
+            Format: {match.scoringMode === 'points' ? `Points target: ${match.rules.pointsLimit} pts` : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'} (${match.rules.gamesPerSet || 6} games per set)`}
           </div>
           <div>
             Announcer: <span style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Active Voice Referee 🔊</span>
@@ -2580,6 +2691,8 @@ function App() {
       if (savedHist) setTournamentHistory(JSON.parse(savedHist));
       
       const savedActive = localStorage.getItem('padel_active_tournament');
+      const savedActiveMatch = localStorage.getItem('padel_active_match');
+      
       if (savedActive) {
         const parsed = JSON.parse(savedActive);
         // Self-Healing Bootloader Check:
@@ -2592,11 +2705,20 @@ function App() {
           console.warn("Detected legacy/corrupt active tournament state. Purging automatically.");
           localStorage.removeItem('padel_active_tournament');
         }
+      } else if (savedActiveMatch) {
+        const parsedMatch = JSON.parse(savedActiveMatch);
+        if (parsedMatch && parsedMatch.score) {
+          setActiveMatch(parsedMatch);
+          setCurrentScreen('interactive-scorer');
+        } else {
+          localStorage.removeItem('padel_active_match');
+        }
       }
     } catch(e) {
       console.error("Failed loading data from localStorage", e);
       try {
         localStorage.removeItem('padel_active_tournament');
+        localStorage.removeItem('padel_active_match');
       } catch(_) {}
     }
   }, []);
@@ -2651,7 +2773,8 @@ function App() {
                   rules: {
                     setsFormat: 'best3', // best3, best4, best5, first3
                     advantageRule: 'goldenPoint',
-                    tiebreakerTarget: 7
+                    tiebreakerTarget: 7,
+                    gamesPerSet: 6
                   },
                   score: {
                     teamAScore: 0,
@@ -2738,25 +2861,43 @@ function App() {
               }}
               onSaveMatch={(finalScore, completed) => {
                 if (activeMatch.isTournament) {
-                  // Return score to tournament state
                   const { roundIndex, matchIndex } = activeTournamentMatch;
-                  const copy = { ...activeTournament };
                   
-                  // Update match score
-                  copy.rounds[roundIndex].matches[matchIndex].score = finalScore;
-                  copy.rounds[roundIndex].matches[matchIndex].completed = completed;
+                  // Clone rounds and matches immutably to trigger state change and re-render correctly
+                  const updatedRounds = activeTournament.rounds.map((round, rIdx) => {
+                    if (rIdx !== roundIndex) return round;
+                    const updatedMatches = round.matches.map((m, mIdx) => {
+                      if (mIdx !== matchIndex) return m;
+                      return { ...m, score: finalScore, completed: completed };
+                    });
+                    return { ...round, matches: updatedMatches };
+                  });
                   
-                  // If the round is finished, update standings
-                  // Simple auto-save
+                  const copy = { ...activeTournament, rounds: updatedRounds };
+                  
+                  // Update active tournament state and write to localStorage
                   updateTournamentState(copy);
-                  setCurrentScreen('active-matches');
+                  
+                  // Only route back if completed
+                  if (completed) {
+                    setCurrentScreen('active-matches');
+                    setActiveMatch(null);
+                    setActiveTournamentMatch(null);
+                  }
                 } else {
                   // Standalone match save
-                  alert("Match score updated/saved locally!");
-                  setCurrentScreen('dashboard');
+                  if (completed) {
+                    localStorage.removeItem('padel_active_match');
+                    alert("Match completed and saved locally!");
+                    setCurrentScreen('dashboard');
+                    setActiveMatch(null);
+                  } else {
+                    // Update active standalone match in localstorage
+                    const updatedMatch = { ...activeMatch, score: finalScore };
+                    setActiveMatch(updatedMatch);
+                    localStorage.setItem('padel_active_match', JSON.stringify(updatedMatch));
+                  }
                 }
-                setActiveMatch(null);
-                setActiveTournamentMatch(null);
               }}
             />
           );

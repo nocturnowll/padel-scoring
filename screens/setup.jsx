@@ -48,6 +48,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
   // Scoring rules
   const [pointsLimit, setPointsLimit] = React.useState(24); // 16, 24, 32, 40 points
   const [setsFormat, setSetsFormat] = React.useState('best3'); // 'best3', 'best4', 'best5', 'first3'
+  const [gamesPerSet, setGamesPerSet] = React.useState(6); // 4, 5, 6, 8 games target
   const [advantageRule, setAdvantageRule] = React.useState('goldenPoint'); // 'goldenPoint', 'deuce'
   const [tiebreakerTarget, setTiebreakerTarget] = React.useState(7); // 7, 10
   const [isCustomPoints, setIsCustomPoints] = React.useState(false);
@@ -107,7 +108,8 @@ function SetupScreen({ tweaks, onBack, onStart }) {
     const rules = {
       setsFormat,
       advantageRule,
-      tiebreakerTarget
+      tiebreakerTarget,
+      gamesPerSet
     };
     
     if (format === 'individual_americano') {
@@ -420,6 +422,27 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
                     {setsFormat === 'best4' && "Best of 4 sets allows matches to end in a 2-2 tie. Points are tallies of total games/points won."}
                     {setsFormat === 'first3' && "Match finishes immediately when a side achieves 3 set wins (equivalent to best of 5, but speedier)."}
+                  </div>
+                </div>
+
+                {/* Games per Set */}
+                <div>
+                  <label className="ag-label">Games per Set (Set Target)</label>
+                  <div className="ag-sets-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                    {[4, 5, 6, 8].map(g => (
+                      <button 
+                        key={g}
+                        type="button"
+                        className={`ag-pill ${gamesPerSet === g ? 'ag-pill-active' : ''}`}
+                        onClick={() => setGamesPerSet(g)}
+                        style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', textAlign: 'center', fontSize: 11 }}
+                      >
+                        {g === 4 ? '4 (Short)' : g === 6 ? '6 (Standard)' : g === 8 ? '8 (Pro)' : `${g} games`}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                    Select how many games a team needs to win to claim a set (2-game margin applies).
                   </div>
                 </div>
 

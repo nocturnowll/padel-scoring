@@ -66,6 +66,8 @@ function App() {
       if (savedHist) setTournamentHistory(JSON.parse(savedHist));
       
       const savedActive = localStorage.getItem('padel_active_tournament');
+      const savedActiveMatch = localStorage.getItem('padel_active_match');
+      
       if (savedActive) {
         const parsed = JSON.parse(savedActive);
         // Self-Healing Bootloader Check:
@@ -78,11 +80,20 @@ function App() {
           console.warn("Detected legacy/corrupt active tournament state. Purging automatically.");
           localStorage.removeItem('padel_active_tournament');
         }
+      } else if (savedActiveMatch) {
+        const parsedMatch = JSON.parse(savedActiveMatch);
+        if (parsedMatch && parsedMatch.score) {
+          setActiveMatch(parsedMatch);
+          setCurrentScreen('interactive-scorer');
+        } else {
+          localStorage.removeItem('padel_active_match');
+        }
       }
     } catch(e) {
       console.error("Failed loading data from localStorage", e);
       try {
         localStorage.removeItem('padel_active_tournament');
+        localStorage.removeItem('padel_active_match');
       } catch(_) {}
     }
   }, []);
@@ -137,7 +148,8 @@ function App() {
                   rules: {
                     setsFormat: 'best3', // best3, best4, best5, first3
                     advantageRule: 'goldenPoint',
-                    tiebreakerTarget: 7
+                    tiebreakerTarget: 7,
+                    gamesPerSet: 6
                   },
                   score: {
                     teamAScore: 0,
@@ -224,25 +236,43 @@ function App() {
               }}
               onSaveMatch={(finalScore, completed) => {
                 if (activeMatch.isTournament) {
-                  // Return score to tournament state
                   const { roundIndex, matchIndex } = activeTournamentMatch;
-                  const copy = { ...activeTournament };
                   
-                  // Update match score
-                  copy.rounds[roundIndex].matches[matchIndex].score = finalScore;
-                  copy.rounds[roundIndex].matches[matchIndex].completed = completed;
+                  // Clone rounds and matches immutably to trigger state change and re-render correctly
+                  const updatedRounds = activeTournament.rounds.map((round, rIdx) => {
+                    if (rIdx !== roundIndex) return round;
+                    const updatedMatches = round.matches.map((m, mIdx) => {
+                      if (mIdx !== matchIndex) return m;
+                      return { ...m, score: finalScore, completed: completed };
+                    });
+                    return { ...round, matches: updatedMatches };
+                  });
                   
-                  // If the round is finished, update standings
-                  // Simple auto-save
+                  const copy = { ...activeTournament, rounds: updatedRounds };
+                  
+                  // Update active tournament state and write to localStorage
                   updateTournamentState(copy);
-                  setCurrentScreen('active-matches');
+                  
+                  // Only route back if completed
+                  if (completed) {
+                    setCurrentScreen('active-matches');
+                    setActiveMatch(null);
+                    setActiveTournamentMatch(null);
+                  }
                 } else {
                   // Standalone match save
-                  alert("Match score updated/saved locally!");
-                  setCurrentScreen('dashboard');
+                  if (completed) {
+                    localStorage.removeItem('padel_active_match');
+                    alert("Match completed and saved locally!");
+                    setCurrentScreen('dashboard');
+                    setActiveMatch(null);
+                  } else {
+                    // Update active standalone match in localstorage
+                    const updatedMatch = { ...activeMatch, score: finalScore };
+                    setActiveMatch(updatedMatch);
+                    localStorage.setItem('padel_active_match', JSON.stringify(updatedMatch));
+                  }
                 }
-                setActiveMatch(null);
-                setActiveTournamentMatch(null);
               }}
             />
           );

@@ -391,6 +391,7 @@ const StatsEngine = {
     
     const format = tournament.format || 'individual_americano';
     const isIndividual = format.includes('individual') || format === 'mexicano';
+    const scoringMode = tournament.scoringMode || 'points';
     
     // Reset player scores
     const playerMap = {};
@@ -404,21 +405,58 @@ const StatsEngine = {
         diff: 0,
         played: 0,
         won: 0,
-        lost: 0,
-        rawWins: 0, // matches won
+        lost: 0
       };
     });
     
-    // Process all rounds and finished matches
+    // Process all rounds and matches
     const rounds = tournament.rounds || [];
     rounds.forEach(round => {
       if (!round || !round.matches) return;
       round.matches.forEach(match => {
-        if (!match || !match.completed || !match.score) return;
+        if (!match || !match.score) return;
         
-        const scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
-        const scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
+        let scoreA = 0;
+        let scoreB = 0;
+        
+        if (scoringMode === 'tennis') {
+          // Tennis Sets: points and difference are tallied based on total games won!
+          // We sum the games from all completed sets in the sets array, plus current active set games.
+          const sets = match.score.sets || [];
+          let gamesA = 0;
+          let gamesB = 0;
+          sets.forEach(s => {
+            gamesA += s.teamA || 0;
+            gamesB += s.teamB || 0;
+          });
+          gamesA += match.score.currentGameA || 0;
+          gamesB += match.score.currentGameB || 0;
+          
+          scoreA = gamesA;
+          scoreB = gamesB;
+        } else {
+          // Raw points Americano: points and difference are raw points scored
+          scoreA = match.score.teamAScore !== undefined ? match.score.teamAScore : 0;
+          scoreB = match.score.teamBScore !== undefined ? match.score.teamBScore : 0;
+        }
+        
         const diff = scoreA - scoreB;
+        
+        // Helper to update player stats
+        const updatePlayerStats = (id, pointsToAdd, diffToAdd, isMatchCompleted, isMatchWon) => {
+          if (playerMap[id]) {
+            playerMap[id].points += pointsToAdd;
+            playerMap[id].diff += diffToAdd;
+            if (isMatchCompleted) {
+              playerMap[id].played += 1;
+              if (isMatchWon) {
+                playerMap[id].won += 1;
+              } else {
+                playerMap[id].lost += 1;
+              }
+            }
+          }
+        };
         
         if (isIndividual) {
           if (!match.teamA || !match.teamB) return;
@@ -426,58 +464,73 @@ const StatsEngine = {
           const p2A = match.teamA.p2 ? match.teamA.p2.id : null;
           const idsA = [p1A, p2A].filter(Boolean);
           
-          idsA.forEach(id => {
-            if (playerMap[id]) {
-              playerMap[id].played += 1;
-              playerMap[id].points += scoreA;
-              playerMap[id].diff += diff;
-              if (diff > 0) playerMap[id].won += 1;
-              else if (diff < 0) playerMap[id].lost += 1;
-            }
-          });
-          
           const p1B = match.teamB.p1 ? match.teamB.p1.id : null;
           const p2B = match.teamB.p2 ? match.teamB.p2.id : null;
           const idsB = [p1B, p2B].filter(Boolean);
           
-          idsB.forEach(id => {
-            if (playerMap[id]) {
-              playerMap[id].played += 1;
-              playerMap[id].points += scoreB;
-              playerMap[id].diff -= diff;
-              if (diff < 0) playerMap[id].won += 1;
-              else if (diff > 0) playerMap[id].lost += 1;
+          // Determine who won the match overall
+          let isWonA = false;
+          let isWonB = false;
+          
+          if (match.completed) {
+            if (scoringMode === 'tennis') {
+              // Count sets won
+              let setsWonA = 0;
+              let setsWonB = 0;
+              (match.score.sets || []).forEach(s => {
+                if (s.teamA > s.teamB) setsWonA += 1;
+                else if (s.teamB > s.teamA) setsWonB += 1;
+              });
+              isWonA = setsWonA > setsWonB;
+              isWonB = setsWonB > setsWonA;
+            } else {
+              isWonA = scoreA > scoreB;
+              isWonB = scoreB > scoreA;
             }
+          }
+          
+          idsA.forEach(id => {
+            updatePlayerStats(id, scoreA, diff, match.completed, isWonA);
+          });
+          idsB.forEach(id => {
+            updatePlayerStats(id, scoreB, -diff, match.completed, isWonB);
           });
         } else {
-          // Team Americano (fixed pairs, players list are actually teams)
+          // Team Americano
           const teamIdA = match.rawTeamA ? match.rawTeamA.id : (match.teamA && match.teamA.p1 ? match.teamA.p1.id : null);
           const teamIdB = match.rawTeamB ? match.rawTeamB.id : (match.teamB && match.teamB.p1 ? match.teamB.p1.id : null);
           
-          if (teamIdA && playerMap[teamIdA]) {
-            playerMap[teamIdA].played += 1;
-            playerMap[teamIdA].points += scoreA;
-            playerMap[teamIdA].diff += diff;
-            if (diff > 0) playerMap[teamIdA].won += 1;
-            else if (diff < 0) playerMap[teamIdA].lost += 1;
+          let isWonA = false;
+          let isWonB = false;
+          
+          if (match.completed) {
+            if (scoringMode === 'tennis') {
+              let setsWonA = 0;
+              let setsWonB = 0;
+              (match.score.sets || []).forEach(s => {
+                if (s.teamA > s.teamB) setsWonA += 1;
+                else if (s.teamB > s.teamA) setsWonB += 1;
+              });
+              isWonA = setsWonA > setsWonB;
+              isWonB = setsWonB > setsWonA;
+            } else {
+              isWonA = scoreA > scoreB;
+              isWonB = scoreB > scoreA;
+            }
           }
           
-          if (teamIdB && playerMap[teamIdB]) {
-            playerMap[teamIdB].played += 1;
-            playerMap[teamIdB].points += scoreB;
-            playerMap[teamIdB].diff -= diff;
-            if (diff < 0) playerMap[teamIdB].won += 1;
-            else if (diff > 0) playerMap[teamIdB].lost += 1;
+          if (teamIdA) {
+            updatePlayerStats(teamIdA, scoreA, diff, match.completed, isWonA);
+          }
+          if (teamIdB) {
+            updatePlayerStats(teamIdB, scoreB, -diff, match.completed, isWonB);
           }
         }
       });
     });
     
     // Convert back to sorted array
-    // Rank primary by Wins (for Tennis/Sets) or Points Tally (for Americano points)
-    const scoringMode = tournament.scoringMode || 'points';
     return Object.values(playerMap).sort((a, b) => {
-      // In classic Americano, points won is primary. In sets/tennis, matches won/diff is primary.
       if (scoringMode === 'tennis') {
         if (b.won !== a.won) return b.won - a.won; // Most match wins
         if (b.diff !== a.diff) return b.diff - a.diff; // Best game difference

@@ -15,15 +15,15 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   const [teamAScore, setTeamAScore] = React.useState(match.score.teamAScore || 0);
   const [teamBScore, setTeamBScore] = React.useState(match.score.teamBScore || 0);
   const [sets, setSets] = React.useState(match.score.sets ? [...match.score.sets] : []);
-  const [serving, setServing] = React.useState(match.serving || 'teamA');
-  const [serverIndex, setServerIndex] = React.useState(match.serverIndex || 0);
+  const [serving, setServing] = React.useState(match.serving || match.score.serving || 'teamA');
+  const [serverIndex, setServerIndex] = React.useState(match.serverIndex !== undefined ? match.serverIndex : (match.score.serverIndex !== undefined ? match.score.serverIndex : 0));
   
   // Game & Tiebreak sub-states
-  const [currentGameA, setCurrentGameA] = React.useState(0); // active games in active set
-  const [currentGameB, setCurrentGameB] = React.useState(0);
-  const [isTiebreaker, setIsTiebreaker] = React.useState(false);
-  const [tiebreakScoreA, setTiebreakScoreA] = React.useState(0);
-  const [tiebreakScoreB, setTiebreakScoreB] = React.useState(0);
+  const [currentGameA, setCurrentGameA] = React.useState(match.score.currentGameA || 0); // active games in active set
+  const [currentGameB, setCurrentGameB] = React.useState(match.score.currentGameB || 0);
+  const [isTiebreaker, setIsTiebreaker] = React.useState(match.score.isTiebreaker || false);
+  const [tiebreakScoreA, setTiebreakScoreA] = React.useState(match.score.tiebreakScoreA || 0);
+  const [tiebreakScoreB, setTiebreakScoreB] = React.useState(match.score.tiebreakScoreB || 0);
 
   // Undo/Redo Stack
   const [history, setHistory] = React.useState([]);
@@ -32,6 +32,33 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   // Match Timer
   const [elapsed, setElapsed] = React.useState(0);
   const [timerActive, setTimerActive] = React.useState(true);
+  
+  const isMountedRef = React.useRef(false);
+
+  // Auto-Save after every single scoring input in background
+  React.useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    
+    if (match.completed) return;
+    
+    const currentScore = {
+      teamAScore: isTiebreaker ? tiebreakScoreA : teamAScore,
+      teamBScore: isTiebreaker ? tiebreakScoreB : teamBScore,
+      sets: sets,
+      currentGameA,
+      currentGameB,
+      isTiebreaker,
+      serving,
+      serverIndex,
+      tiebreakScoreA,
+      tiebreakScoreB
+    };
+    
+    onSaveMatch(currentScore, false); // completed = false (silent sync)
+  }, [teamAScore, teamBScore, sets, currentGameA, currentGameB, isTiebreaker, tiebreakScoreA, tiebreakScoreB, serving, serverIndex]);
 
   React.useEffect(() => {
     let interval = null;
@@ -310,18 +337,30 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     setServing(nextServ);
     setServerIndex(nextIdx);
 
+    const gamesTarget = match.rules.gamesPerSet || 6;
+    const tiebreakTrigger = gamesTarget <= 5 ? gamesTarget - 1 : gamesTarget;
+
     // Set Win verification
     const checkSetWon = (gamesWon, gamesLost) => {
       if (fromTiebreak) return true;
-      if (gamesWon >= 6 && gamesWon - gamesLost >= 2) return true;
-      return false;
+      
+      if (gamesTarget <= 5) {
+        // Short sets (4 or 5 games): win as soon as you reach the target games count (no 2-game lead needed, e.g. 4-3 or 5-4 is a win)
+        return gamesWon >= gamesTarget;
+      } else {
+        // Standard sets (6 or 8 games): require a 2-game lead (e.g. 6-4, 7-5)
+        if (gamesWon >= gamesTarget && gamesWon - gamesLost >= 2) return true;
+        // In standard sets, if you reach gamesTarget + 1 and have a 2-game lead (e.g. 7-5 in a 6-game set)
+        if (gamesWon > gamesTarget && gamesWon - gamesLost >= 2) return true;
+        return false;
+      }
     };
 
     if (checkSetWon(nextG_A, nextG_B)) {
       winSet(nextG_A, nextG_B);
     } else if (checkSetWon(nextG_B, nextG_A)) {
       winSet(nextG_A, nextG_B);
-    } else if (nextG_A === 6 && nextG_B === 6) {
+    } else if (nextG_A === tiebreakTrigger && nextG_B === tiebreakTrigger) {
       // Launch Tiebreaker!
       setIsTiebreaker(true);
       SpeechAnnouncer.speak(tweaks.refereeVoice.startsWith('es') ? "Muerte súbita" : "Tiebreak", tweaks.refereeVoice);
@@ -343,10 +382,11 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
       else setsWonB += 1;
     });
 
+    const setWinner = finalGamesA > finalGamesB ? 'A' : 'B';
     SpeechAnnouncer.speak(
       tweaks.refereeVoice.startsWith('es') 
-        ? `Set para el Equipo ${setsWonA > setsWonB ? 'A' : 'B'}` 
-        : `Set won by Team ${setsWonA > setsWonB ? 'A' : 'B'}`, 
+        ? `Set para el Equipo ${setWinner}` 
+        : `Set won by Team ${setWinner}`, 
       tweaks.refereeVoice
     );
 
@@ -395,9 +435,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
       tweaks={tweaks}
       title={`${match.sport === 'padel' ? 'Padel' : 'Tennis'} Court Umpire`}
       eyebrow={match.isTournament ? "Tournament Scorer" : "Standalone Scorer"}
-      onBack={() => {
-        if (confirm("Go back? Unsaved scores will be lost.")) onBack();
-      }}
+      onBack={onBack}
       actions={
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <span style={{ fontSize: 11.5, fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)' }} className="ag-inset">
@@ -408,9 +446,6 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
           </button>
           <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={handleRedo} disabled={redoStack.length === 0} style={{ padding: 8 }}>
             <Icon name="redo-2" size={15} />
-          </button>
-          <button className="ag-btn ag-btn-primary ag-btn-sm" onClick={() => handleSave(teamAScore, teamBScore, false)}>
-            Save Progress
           </button>
         </div>
       }
@@ -510,7 +545,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
         {/* Match Rule Summary Panel */}
         <div className="ag-card" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)' }}>
           <div>
-            Format: {match.scoringMode === 'points' ? `Points target: ${match.rules.pointsLimit} pts` : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'}`}
+            Format: {match.scoringMode === 'points' ? `Points target: ${match.rules.pointsLimit} pts` : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'} (${match.rules.gamesPerSet || 6} games per set)`}
           </div>
           <div>
             Announcer: <span style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Active Voice Referee 🔊</span>
