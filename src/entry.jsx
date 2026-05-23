@@ -3057,6 +3057,16 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     const checkSetWon = (gamesWon, gamesLost) => {
       if (fromTiebreak) return true;
       
+      if (match.isTournament) {
+        const fmt = match.rules.setsFormat || 'best3';
+        const totalGames = gamesWon + gamesLost;
+        if (fmt === 'best3') return totalGames >= 3;
+        if (fmt === 'best4') return totalGames >= 4;
+        if (fmt === 'best5') return totalGames >= 5;
+        if (fmt === 'first3') return gamesWon >= 3 || gamesLost >= 3;
+        return false;
+      }
+      
       if (gamesTarget <= 5) {
         // Short sets (4 or 5 games): win as soon as you reach the target games count (no 2-game lead needed, e.g. 4-3 or 5-4 is a win)
         return gamesWon >= gamesTarget;
@@ -3263,7 +3273,17 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
         {/* Match Rule Summary Panel */}
         <div className="ag-card" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)' }}>
           <div>
-            Format: {match.scoringMode === 'points' ? `Points target: ${match.rules.pointsLimit} pts` : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'} (${match.rules.gamesPerSet || 6} games per set)`}
+            Format: {match.scoringMode === 'points' 
+              ? `Points target: ${match.rules.pointsLimit} pts` 
+              : match.isTournament 
+                ? `Tournament Sets: ${match.rules.setsFormat === 'best3' 
+                  ? 'Play exactly 3 games in total' 
+                  : match.rules.setsFormat === 'best4' 
+                    ? 'Play exactly 4 games in total' 
+                    : match.rules.setsFormat === 'best5' 
+                      ? 'Play exactly 5 games in total' 
+                      : 'First to 3 games'}`
+                : `Sets Format: ${match.rules.setsFormat === 'best3' ? 'Best of 3' : match.rules.setsFormat === 'best4' ? 'Best of 4 (ties possible)' : match.rules.setsFormat === 'best5' ? 'Best of 5' : 'First to 3'} (${match.rules.gamesPerSet || 6} games per set)`}
           </div>
           <div>
             Announcer: <span style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Active Voice Referee 🔊</span>
