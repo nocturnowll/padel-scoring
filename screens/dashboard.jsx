@@ -2,13 +2,31 @@
 
 function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTournament, onResumeTournament, onQuickMatch, onViewHistory }) {
   // Sum stats from history
-  const totalCompleted = tournamentHistory.length;
+  const totalCompleted = (tournamentHistory && Array.isArray(tournamentHistory)) ? tournamentHistory.length : 0;
   const totalActive = activeTournament ? 1 : 0;
   
   // Calculate total players registered across history
   const allPlayers = new Set();
-  tournamentHistory.forEach(t => t.players.forEach(p => allPlayers.add(p.name)));
-  if (activeTournament) activeTournament.players.forEach(p => allPlayers.add(p.name));
+  if (tournamentHistory && Array.isArray(tournamentHistory)) {
+    tournamentHistory.forEach(t => {
+      if (t && t.players && Array.isArray(t.players)) {
+        t.players.forEach(p => {
+          if (p) {
+            const name = typeof p === 'object' ? p.name : p;
+            if (name) allPlayers.add(name);
+          }
+        });
+      }
+    });
+  }
+  if (activeTournament && activeTournament.players && Array.isArray(activeTournament.players)) {
+    activeTournament.players.forEach(p => {
+      if (p) {
+        const name = typeof p === 'object' ? p.name : p;
+        if (name) allPlayers.add(name);
+      }
+    });
+  }
   
   return (
     <AppLayout 
@@ -131,9 +149,9 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
                       <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 2, display: 'flex', gap: 8 }}>
                         <span>Sport: {t.sport === 'padel' ? 'Padel' : 'Tennis'}</span>
                         <span>•</span>
-                        <span>Players: {t.players.length}</span>
+                        <span>Players: {t.players ? t.players.length : 0}</span>
                         <span>•</span>
-                        <span>Date: {new Date(t.finishedAt).toLocaleDateString()}</span>
+                        <span>Date: {t.finishedAt ? new Date(t.finishedAt).toLocaleDateString() : 'N/A'}</span>
                       </div>
                     </div>
                     

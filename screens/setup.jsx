@@ -134,7 +134,9 @@ function SetupScreen({ tweaks, onBack, onStart }) {
     if (step > 1) {
       setStep(prev => prev - 1);
     } else {
-      onBack();
+      if (typeof onBack === 'function') {
+        onBack();
+      }
     }
   };
 
@@ -180,7 +182,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             {/* Sport toggle */}
             <div>
               <label className="ag-label">1. Sport Type</label>
-              <div className="ag-flex-row-responsive">
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
                 <button 
                   className={`ag-pill ${sport === 'padel' ? 'ag-pill-active' : ''}`}
                   onClick={() => {
