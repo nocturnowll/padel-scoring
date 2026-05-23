@@ -50,15 +50,15 @@ function SetupScreen({ tweaks, onBack, onStart }) {
   const [setsFormat, setSetsFormat] = React.useState('best3'); // 'best3', 'best4', 'best5', 'first3'
   const [advantageRule, setAdvantageRule] = React.useState('goldenPoint'); // 'goldenPoint', 'deuce'
   const [tiebreakerTarget, setTiebreakerTarget] = React.useState(7); // 7, 10
+  const [isCustomPoints, setIsCustomPoints] = React.useState(false);
+  const [showHelpModal, setShowHelpModal] = React.useState(false);
   
   // Courts count
   const [courtsCount, setCourtsCount] = React.useState(1);
   
   // Players / Teams list
   const [newPlayerName, setNewPlayerName] = React.useState('');
-  const [playerList, setPlayerList] = React.useState([
-    'Kenichi', 'Echa', 'Alex', 'Bob', 'Chris', 'David', 'Emma', 'Frank'
-  ]); // Default 8 players for quick demonstration
+  const [playerList, setPlayerList] = React.useState([]);
 
   const handleAddPlayer = () => {
     if (!newPlayerName.trim()) return;
@@ -189,7 +189,17 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   }}
                   style={{ flex: 1, height: 44, justifyContent: 'center' }}
                 >
-                  <Icon name="activity" size={16} /> Padel Scorer
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: 'middle', display: 'inline-flex' }}>
+                    <circle cx="10" cy="9" r="6" fill="currentColor" fillOpacity="0.1" />
+                    <line x1="14.24" y1="13.24" x2="20" y2="19" />
+                    <line x1="18" y1="21" x2="21" y2="18" />
+                    <circle cx="8" cy="8" r="0.5" fill="currentColor" />
+                    <circle cx="10" cy="7" r="0.5" fill="currentColor" />
+                    <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+                    <circle cx="9" cy="10" r="0.5" fill="currentColor" />
+                    <circle cx="11" cy="10" r="0.5" fill="currentColor" />
+                  </svg>
+                  Padel Scorer
                 </button>
                 <button 
                   className={`ag-pill ${sport === 'tennis' ? 'ag-pill-active' : ''}`}
@@ -281,7 +291,19 @@ function SetupScreen({ tweaks, onBack, onStart }) {
         {/* STEP 2: Scoring Rules */}
         {step === 2 && (
           <div className="ag-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <h3 className="ag-h3" style={{ margin: 0 }}>Configure Match Scoring Rules</h3>
+            
+            {/* Header with Help button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="ag-h3" style={{ margin: 0 }}>Configure Match Scoring Rules</h3>
+              <button 
+                className="ag-btn ag-btn-ghost ag-btn-sm" 
+                onClick={() => setShowHelpModal(true)}
+                style={{ padding: 6, borderRadius: '50%', border: 'none', background: 'transparent' }}
+                title="Scoring Rules Guide"
+              >
+                <Icon name="help-circle" size={18} color="var(--brand-primary)" />
+              </button>
+            </div>
             
             {/* Scoring Mode */}
             <div>
@@ -293,7 +315,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                     onClick={() => setScoringMode('points')}
                     style={{ flex: 1, height: 'auto', minHeight: 40, padding: '8px 12px', whiteSpace: 'normal', textAlign: 'center', justifyContent: 'center' }}
                   >
-                    Raw Americano Points
+                    Raw Points
                   </button>
                 )}
                 <button 
@@ -301,28 +323,57 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   onClick={() => setScoringMode('tennis')}
                   style={{ flex: 1, height: 'auto', minHeight: 40, padding: '8px 12px', whiteSpace: 'normal', textAlign: 'center', justifyContent: 'center' }}
                 >
-                  Traditional Sets
+                  Tennis Points
                 </button>
               </div>
             </div>
 
             {/* Sub options based on scoring mode */}
             {scoringMode === 'points' ? (
-              <div>
-                <label className="ag-label">Total Points per Match</label>
-                <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                  {[16, 24, 32, 40].map(p => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label className="ag-label">Total Points per Match</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: '100%' }}>
+                    {[18, 21, 24, 32].map(p => (
+                      <button 
+                        key={p} 
+                        className={`ag-pill ${!isCustomPoints && pointsLimit === p ? 'ag-pill-active' : ''}`}
+                        onClick={() => {
+                          setPointsLimit(p);
+                          setIsCustomPoints(false);
+                        }}
+                        style={{ flex: 1, justifyContent: 'center', height: 36, padding: 0, minWidth: 60, fontSize: 11 }}
+                      >
+                        {p} Pts
+                      </button>
+                    ))}
                     <button 
-                      key={p} 
-                      className={`ag-pill ${pointsLimit === p ? 'ag-pill-active' : ''}`}
-                      onClick={() => setPointsLimit(p)}
-                      style={{ flex: 1, justifyContent: 'center', height: 36, padding: 0, minWidth: 0, fontSize: 11 }}
+                      className={`ag-pill ${isCustomPoints ? 'ag-pill-active' : ''}`}
+                      onClick={() => {
+                        setIsCustomPoints(true);
+                      }}
+                      style={{ flex: 1, justifyContent: 'center', height: 36, padding: 0, minWidth: 60, fontSize: 11 }}
                     >
-                      {p} Pts
+                      Custom
                     </button>
-                  ))}
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 8 }}>
+
+                {isCustomPoints && (
+                  <div>
+                    <label className="ag-label">Enter Custom Points Target</label>
+                    <input 
+                      type="number" 
+                      className="ag-input" 
+                      value={pointsLimit}
+                      onChange={(e) => setPointsLimit(Math.max(1, parseInt(e.target.value) || 0))}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                      min="1"
+                    />
+                  </div>
+                )}
+
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                   Every single point scored counts toward the individual's standings pool. Match service alternates every 4 points.
                 </div>
               </div>
@@ -338,21 +389,21 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                       onClick={() => setSetsFormat('best3')}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 3
+                      BO3
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best4' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('best4')}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 4 (Ties)
+                      BO4
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best5' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('best5')}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 5
+                      BO5
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'first3' ? 'ag-pill-active' : ''}`}
@@ -368,7 +419,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   </div>
                 </div>
 
-                <div className="ag-rules-grid">
+                <div className={scoringMode === 'tennis' ? "ag-rules-grid" : ""}>
                   {/* Advantage rule */}
                   <div>
                     <label className="ag-label">Advantage / Deuce Rule</label>
@@ -377,23 +428,25 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                       value={advantageRule} 
                       onChange={(e) => setAdvantageRule(e.target.value)}
                     >
-                      <option value="goldenPoint">Golden Point (Deciding point at 40-40)</option>
-                      <option value="deuce">Standard Advantage (Must win by 2 points)</option>
+                      <option value="goldenPoint">Golden Point Rule</option>
+                      <option value="deuce">Standard Advantage</option>
                     </select>
                   </div>
 
                   {/* Tiebreaker Target */}
-                  <div>
-                    <label className="ag-label">Tiebreaker Target</label>
-                    <select 
-                      className="ag-select" 
-                      value={tiebreakerTarget} 
-                      onChange={(e) => setTiebreakerTarget(parseInt(e.target.value))}
-                    >
-                      <option value="7">First to 7 Points (Must win by 2)</option>
-                      <option value="10">Match Tiebreak: First to 10 Points</option>
-                    </select>
-                  </div>
+                  {scoringMode === 'tennis' && (
+                    <div>
+                      <label className="ag-label">Tiebreaker Target</label>
+                      <select 
+                        className="ag-select" 
+                        value={tiebreakerTarget} 
+                        onChange={(e) => setTiebreakerTarget(parseInt(e.target.value))}
+                      >
+                        <option value="7">First to 7</option>
+                        <option value="10">First to 10</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -423,79 +476,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
         {/* STEP 3: Players & Courts */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
-            <div className="ag-setup-grid">
             
-            {/* Roster management */}
-            <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="ag-h3" style={{ margin: 0 }}>
-                  {format === 'team_americano' ? 'Teams Registry' : 'Players Registry'} ({playerList.length})
-                </h3>
-                <button className="ag-btn ag-btn-link ag-btn-sm" style={{ color: 'var(--danger)' }} onClick={handleClearPlayers}>
-                  Clear All
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input 
-                  type="text" 
-                  className="ag-input" 
-                  placeholder={format === 'team_americano' ? 'Add team name...' : 'Add player name...'} 
-                  value={newPlayerName}
-                  onChange={(e) => setNewPlayerName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(); }}
-                  style={{ flex: 1, minWidth: 0 }}
-                />
-                <button className="ag-btn ag-btn-primary" onClick={handleAddPlayer} style={{ padding: '0 18px', flexShrink: 0 }}>
-                  <Icon name="plus" size={16} />
-                </button>
-              </div>
-
-              {/* Quick load presets */}
-              <div>
-                <label className="ag-label">Roster Size Presets</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {[4, 5, 8, 12, 16].map(n => (
-                    <button 
-                      key={n} 
-                      className="ag-pill" 
-                      onClick={() => loadPreset(n)}
-                      style={{ height: 26, fontSize: 10.5 }}
-                    >
-                      {n} {format === 'team_americano' ? 'Teams' : 'Players'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* List */}
-              <div className="ag-inset ag-scroll" style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: 4 }}>
-                {playerList.length === 0 ? (
-                  <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Roster is empty. Add names above.</div>
-                ) : (
-                  playerList.map((p, idx) => (
-                    <div 
-                      key={idx} 
-                      style={{ 
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                        padding: '6px 10px', borderRadius: 8, borderBottom: '1px solid var(--hairline-soft)'
-                      }}
-                    >
-                      <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }} title={p}>
-                        {idx + 1}. {p}
-                      </span>
-                      <button 
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center' }}
-                        onClick={() => handleRemovePlayer(idx)}
-                      >
-                        <Icon name="x" size={14} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             {/* Arena Config (Courts) */}
             <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <h3 className="ag-h3" style={{ margin: 0 }}>Courts & Arena Layout</h3>
@@ -541,7 +522,59 @@ function SetupScreen({ tweaks, onBack, onStart }) {
 
             </div>
 
-          </div>
+            {/* Roster management */}
+            <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="ag-h3" style={{ margin: 0 }}>
+                  {format === 'team_americano' ? 'Teams Registry' : 'Players Registry'} ({playerList.length})
+                </h3>
+                <button className="ag-btn ag-btn-link ag-btn-sm" style={{ color: 'var(--danger)' }} onClick={handleClearPlayers}>
+                  Clear All
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input 
+                  type="text" 
+                  className="ag-input" 
+                  placeholder={format === 'team_americano' ? 'Add team name...' : 'Add player name...'} 
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(); }}
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+                <button className="ag-btn ag-btn-primary" onClick={handleAddPlayer} style={{ padding: '0 18px', flexShrink: 0 }}>
+                  <Icon name="plus" size={16} />
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="ag-inset ag-scroll" style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: 4 }}>
+                {playerList.length === 0 ? (
+                  <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>Roster is empty. Add names above.</div>
+                ) : (
+                  playerList.map((p, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        padding: '6px 10px', borderRadius: 8, borderBottom: '1px solid var(--hairline-soft)'
+                      }}
+                    >
+                      <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }} title={p}>
+                        {idx + 1}. {p}
+                      </span>
+                      <button 
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center' }}
+                        onClick={() => handleRemovePlayer(idx)}
+                      >
+                        <Icon name="x" size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
 
           {/* Step 3 Bottom Button Bar */}
           <div className="ag-card" style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
@@ -561,6 +594,72 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             </button>
           </div>
 
+        </div>
+      )}
+
+      {/* Help Modal Popup Overlay */}
+      {showHelpModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16
+        }}>
+          <div className="ag-card-solid ag-float" style={{
+            width: '100%', maxWidth: 460, padding: 24,
+            display: 'flex', flexDirection: 'column', gap: 16,
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--hairline-strong)', paddingBottom: 12 }}>
+              <h3 className="ag-h3" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--brand-primary)' }}>
+                <Icon name="help-circle" size={18} /> Scoring Rules Guide
+              </h3>
+              <button 
+                className="ag-btn ag-btn-ghost ag-btn-sm" 
+                onClick={() => setShowHelpModal(false)}
+                style={{ padding: 6, borderRadius: '50%', border: 'none', background: 'transparent' }}
+              >
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', maxHeight: 320, paddingRight: 4 }} className="ag-scroll">
+              <div>
+                <h4 className="ag-h4" style={{ margin: '0 0 4px', color: '#fff' }}>Scoring Methods</h4>
+                <p className="ag-body" style={{ margin: 0, fontSize: 11.5 }}>
+                  <strong>Raw Points:</strong> The match is played continuously up to the target points limit (e.g. 18, 21, 24, 32). Service rotates every 4 points. Every point won contributes to standings.
+                  <br /><br />
+                  <strong>Tennis Points:</strong> Matches use standard tennis scoring (15, 30, 40, Game) and are tracked set-by-set.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="ag-h4" style={{ margin: '0 0 4px', color: '#fff' }}>Sets Format (Tennis Points Only)</h4>
+                <p className="ag-body" style={{ margin: 0, fontSize: 11.5 }}>
+                  <strong>BO3:</strong> Best of 3 sets (first side to win 2 sets wins).
+                  <br />
+                  <strong>BO4:</strong> Best of 4 sets (allows a 2-2 tie. Point standings count total games/points won).
+                  <br />
+                  <strong>BO5:</strong> Best of 5 sets (first side to win 3 sets wins).
+                  <br />
+                  <strong>First to 3:</strong> Play finishes immediately when a side achieves 3 set wins (faster version of BO5).
+                </p>
+              </div>
+
+              <div>
+                <h4 className="ag-h4" style={{ margin: '0 0 4px', color: '#fff' }}>Advantage / Deuce Rules</h4>
+                <p className="ag-body" style={{ margin: 0, fontSize: 11.5 }}>
+                  <strong>Golden Point Rule:</strong> At 40-40 (deuce), a single deciding point is played. The receiving team chooses which side to receive the serve.
+                  <br />
+                  <strong>Standard Advantage:</strong> Classic tennis deuce, where a side must score two consecutive points after deuce to win the game.
+                </p>
+              </div>
+            </div>
+
+            <button className="ag-btn ag-btn-primary ag-btn-block" onClick={() => setShowHelpModal(false)} style={{ marginTop: 8 }}>
+              Got It
+            </button>
+          </div>
         </div>
       )}
 

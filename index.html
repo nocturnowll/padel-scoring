@@ -312,18 +312,18 @@ function App() {
         {/* Dynamic Mode Switcher (PWA vs Design Showcase Canvas) */}
         <div className="ag-top-header-right ag-mobile-hide">
           <button 
-            className={`ag-pill ${viewMode === 'app' ? 'ag-pill-active' : ''}`}
+            className={`ag-btn ${viewMode === 'app' ? 'ag-btn-primary' : 'ag-btn-ghost'} ag-btn-sm`}
             onClick={() => setViewMode('app')}
-            style={{ height: 26, fontSize: 11 }}
+            style={{ padding: '6px 14px', height: 'auto', fontSize: 11 }}
           >
-            Live App
+            Live App Mode
           </button>
           <button 
-            className={`ag-pill ${viewMode === 'canvas' ? 'ag-pill-active' : ''}`}
+            className={`ag-btn ${viewMode === 'canvas' ? 'ag-btn-primary' : 'ag-btn-ghost'} ag-btn-sm`}
             onClick={() => setViewMode('canvas')}
-            style={{ height: 26, fontSize: 11 }}
+            style={{ padding: '6px 14px', height: 'auto', fontSize: 11 }}
           >
-            Showcase
+            Showcase Canvas
           </button>
         </div>
       </header>

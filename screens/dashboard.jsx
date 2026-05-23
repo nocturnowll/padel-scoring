@@ -13,15 +13,15 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
   return (
     <AppLayout 
       tweaks={tweaks}
-      title="Court Central"
-      eyebrow="Atelier Glass Scorer"
+      title=""
+      eyebrow=""
       actions={
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={onQuickMatch}>
             <Icon name="play" size={14} /> Quick Scorer
           </button>
           <button className="ag-btn ag-btn-primary ag-btn-sm" onClick={onNewTournament}>
-            <Icon name="plus" size={14} /> Host Tournament
+            <Icon name="plus" size={14} /> Host Match
           </button>
         </div>
       }
@@ -45,11 +45,11 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
           <div style={{ display: 'flex', gap: 8 }}>
             {activeTournament ? (
               <button className="ag-btn ag-btn-primary pulse-glow-border" onClick={onResumeTournament}>
-                <Icon name="activity" size={15} /> Resume Tournament
+                <Icon name="activity" size={15} /> Resume Match
               </button>
             ) : (
               <button className="ag-btn ag-btn-primary" onClick={onNewTournament}>
-                <Icon name="swords" size={15} /> Start Tournament
+                <Icon name="swords" size={15} /> Start Match
               </button>
             )}
           </div>
@@ -60,7 +60,7 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
           
           {/* Ongoing Panel */}
           <div className="ag-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span className="ag-meta">Active Events</span>
+            <span className="ag-meta">Active Matches</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span className="score-glow-sub" style={{ fontSize: 32, fontWeight: 700, color: totalActive > 0 ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
                 {totalActive}
@@ -68,19 +68,19 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
               <span className="ag-body" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>running</span>
             </div>
             <div style={{ marginTop: 'auto', fontSize: 11, color: 'var(--text-secondary)' }}>
-              {activeTournament ? `${activeTournament.name} in progress` : "No ongoing tournament"}
+              {activeTournament ? `${activeTournament.name} in progress` : "No ongoing match"}
             </div>
           </div>
 
           {/* History Count Panel */}
           <div className="ag-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span className="ag-meta">Archived Tourneys</span>
+            <span className="ag-meta">Archived Matches</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span className="score-glow-sub" style={{ fontSize: 32, fontWeight: 700 }}>{totalCompleted}</span>
               <span className="ag-body" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>saved</span>
             </div>
             <div style={{ marginTop: 'auto', fontSize: 11, color: 'var(--text-secondary)' }}>
-              Local tournament record history
+              Local match record history
             </div>
           </div>
 
@@ -104,15 +104,15 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
           {/* History / Active queue */}
           <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="ag-h3" style={{ margin: 0 }}>Tournament Roster History</h3>
+              <h3 className="ag-h3" style={{ margin: 0 }}>Match Roster History</h3>
               <Icon name="history" size={16} color="var(--text-tertiary)" />
             </div>
             
             {tournamentHistory.length === 0 ? (
               <div style={{ padding: '30px 10px', textAlign: 'center', border: '1px dashed var(--hairline)', borderRadius: 12 }}>
                 <Icon name="archive" size={28} color="var(--text-tertiary)" style={{ marginBottom: 8 }} />
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>No completed tournaments</div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>Host your first event to see it logged here!</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>No completed matches</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>Host your first match to see it logged here!</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

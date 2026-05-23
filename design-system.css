@@ -628,10 +628,9 @@
   gap: 12px;
 }
 .ag-dashboard-bottom-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: start;
 }
 .ag-active-matches-grid {
   display: grid;
