@@ -28,6 +28,9 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   // ──────────────────────────────────────────────────────────────────────────
   // Automatically restructure rounds and re-distribute pending matches across the new court amount
   // ──────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+  // Automatically restructure rounds and re-distribute pending matches across the new court amount
+  // ──────────────────────────────────────────────────────────────────────────
   const handleCourtsCountChange = (newCount) => {
     const count = parseInt(newCount) || 1;
     setCourtsCount(count);
@@ -49,7 +52,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
     });
     
     // 2. Re-allocate pending matches into new rounds of size `count`
-    const newRounds = [];
+    let newRounds = [];
     let pendingIdx = 0;
     let rIdx = 0;
     
@@ -96,6 +99,10 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       }
     }
     
+    // 3. Automatically run our duplicate-free play-count-balanced regenerator on the restructured rounds
+    // to guarantee there are no booking collisions (duplicate players in same round)!
+    newRounds = regeneratePendingPairings(newRounds, players, count, tournament.format);
+    
     setRounds(newRounds);
   };
 
@@ -111,6 +118,151 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       if (m.teamB.p2 && m.teamB.p2.id) playingIds.add(m.teamB.p2.id);
     });
     return currentPlayers.filter(p => !playingIds.has(p.id));
+  };
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Intelligent play-count balanced pairings generator for all uncompleted matches
+  // ──────────────────────────────────────────────────────────────────────────
+  const regeneratePendingPairings = (currentRounds, currentPlayers, count, tournamentFormat) => {
+    const isTeam = tournamentFormat === 'team_americano';
+    const playersNeededPerMatch = isTeam ? 2 : 4;
+    
+    const updatedRounds = JSON.parse(JSON.stringify(currentRounds));
+    
+    // Keep track of match counts per player to ensure fair play time
+    const playCounts = {};
+    currentPlayers.forEach(p => {
+      playCounts[p.id] = 0;
+    });
+    
+    // Tally play counts from completed matches across all rounds
+    updatedRounds.forEach(round => {
+      round.matches.forEach(match => {
+        if (match.completed) {
+          if (isTeam) {
+            if (match.teamA.p1?.id) playCounts[match.teamA.p1.id] = (playCounts[match.teamA.p1.id] || 0) + 1;
+            if (match.teamB.p1?.id) playCounts[match.teamB.p1.id] = (playCounts[match.teamB.p1.id] || 0) + 1;
+          } else {
+            if (match.teamA.p1?.id) playCounts[match.teamA.p1.id] = (playCounts[match.teamA.p1.id] || 0) + 1;
+            if (match.teamA.p2?.id) playCounts[match.teamA.p2.id] = (playCounts[match.teamA.p2.id] || 0) + 1;
+            if (match.teamB.p1?.id) playCounts[match.teamB.p1.id] = (playCounts[match.teamB.p1.id] || 0) + 1;
+            if (match.teamB.p2?.id) playCounts[match.teamB.p2.id] = (playCounts[match.teamB.p2.id] || 0) + 1;
+          }
+        }
+      });
+    });
+    
+    // Process each round to re-generate pending matches
+    updatedRounds.forEach((round, rIdx) => {
+      // 1. Separate completed matches in this round
+      const completed = round.matches.filter(m => m.completed);
+      
+      // Determine which players are already busy in completed matches in this round
+      const busyPlayers = new Set();
+      completed.forEach(match => {
+        if (isTeam) {
+          if (match.teamA.p1?.id) busyPlayers.add(match.teamA.p1.id);
+          if (match.teamB.p1?.id) busyPlayers.add(match.teamB.p1.id);
+        } else {
+          if (match.teamA.p1?.id) busyPlayers.add(match.teamA.p1.id);
+          if (match.teamA.p2?.id) busyPlayers.add(match.teamA.p2.id);
+          if (match.teamB.p1?.id) busyPlayers.add(match.teamB.p1.id);
+          if (match.teamB.p2?.id) busyPlayers.add(match.teamB.p2.id);
+        }
+      });
+      
+      // 2. Generate new pending matches to fill the remaining court slots
+      const activeMatches = [...completed];
+      const maxMatchesInRound = count;
+      const emptySlots = maxMatchesInRound - completed.length;
+      
+      if (emptySlots > 0) {
+        // Find players who are available (not busy in completed matches)
+        let availablePlayers = currentPlayers.filter(p => !busyPlayers.has(p.id));
+        
+        const totalMatchesToGenerate = emptySlots;
+        
+        for (let m = 0; m < totalMatchesToGenerate; m++) {
+          if (availablePlayers.length < playersNeededPerMatch) break;
+          
+          // Sort available players by their play count ascending to prioritize benched/rested athletes
+          availablePlayers.sort((a, b) => (playCounts[a.id] || 0) - (playCounts[b.id] || 0));
+          
+          // Select candidate players with similar low play counts
+          const lowestCount = playCounts[availablePlayers[0].id] || 0;
+          const candidates = availablePlayers.filter(p => (playCounts[p.id] || 0) <= lowestCount + 1);
+          
+          // Shuffle candidates randomly to randomize the pairings organically
+          const shuffledCandidates = candidates.sort(() => Math.random() - 0.5);
+          
+          // Grab the needed players
+          const matchPlayers = [];
+          for (let i = 0; i < playersNeededPerMatch; i++) {
+            const nextPlayer = shuffledCandidates[i] || availablePlayers.find(p => !matchPlayers.includes(p));
+            if (nextPlayer) {
+              matchPlayers.push(nextPlayer);
+              availablePlayers = availablePlayers.filter(p => p.id !== nextPlayer.id);
+            }
+          }
+          
+          if (matchPlayers.length < playersNeededPerMatch) break;
+          
+          // Increment play counts
+          matchPlayers.forEach(p => {
+            playCounts[p.id] = (playCounts[p.id] || 0) + 1;
+          });
+          
+          // Find next available court number
+          let courtNum = 1;
+          while (activeMatches.some(am => am.court === courtNum)) {
+            courtNum++;
+          }
+          
+          // Build match structure
+          if (isTeam) {
+            activeMatches.push({
+              id: `r${rIdx + 1}_m_gen_${Date.now()}_${m}`,
+              court: courtNum,
+              teamA: { p1: { id: matchPlayers[0].id, name: matchPlayers[0].name }, p2: { id: '', name: '' } },
+              teamB: { p1: { id: matchPlayers[1].id, name: matchPlayers[1].name }, p2: { id: '', name: '' } },
+              score: null,
+              completed: false,
+              rawTeamA: matchPlayers[0],
+              rawTeamB: matchPlayers[1]
+            });
+          } else {
+            activeMatches.push({
+              id: `r${rIdx + 1}_m_gen_${Date.now()}_${m}`,
+              court: courtNum,
+              teamA: { 
+                p1: { id: matchPlayers[0].id, name: matchPlayers[0].name }, 
+                p2: { id: matchPlayers[1].id, name: matchPlayers[1].name } 
+              },
+              teamB: { 
+                p1: { id: matchPlayers[2].id, name: matchPlayers[2].name }, 
+                p2: { id: matchPlayers[3].id, name: matchPlayers[3].name } 
+              },
+              score: null,
+              completed: false
+            });
+          }
+        }
+      }
+      
+      // Update round matches and sitting out list
+      round.matches = activeMatches;
+      round.sittingOut = getRecalculatedSittingOut(activeMatches, currentPlayers);
+    });
+    
+    return updatedRounds;
+  };
+
+  const handleShufflePending = () => {
+    const updatedRounds = regeneratePendingPairings(rounds, players, courtsCount, tournament.format);
+    setRounds(updatedRounds);
+    setErrorMessage('');
+    setSuccessMessage("🎲 Pending pairings re-shuffled randomly & resting benches balanced successfully!");
+    setTimeout(() => setSuccessMessage(''), 4000);
   };
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -496,6 +648,29 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                 style={{ padding: 8 }}
               >
                 <Icon name="chevron-right" size={16} />
+              </button>
+            </div>
+
+            {/* Quick action bar to shuffle pending pairings */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, marginBottom: 4 }}>
+              <button 
+                type="button"
+                className="ag-btn ag-btn-ghost ag-btn-sm" 
+                onClick={handleShufflePending}
+                style={{ 
+                  color: 'var(--brand-primary)', 
+                  border: '1px solid var(--brand-glow)', 
+                  background: 'rgba(163, 230, 53, 0.04)',
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Icon name="shuffle" size={13} /> Shuffle Pending Pairings
               </button>
             </div>
 
