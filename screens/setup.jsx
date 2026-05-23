@@ -273,6 +273,8 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                     Available directly from Court Central Home Dashboard.
                   </span>
                 </div>
+              </div>
+            </div>
 
             {/* Step 1 Bottom Button Bar */}
             <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--hairline-soft)', paddingTop: 16 }}>

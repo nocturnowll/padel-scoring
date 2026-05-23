@@ -368,7 +368,7 @@ const StatsEngine = {
   tallyTournament: (tournament) => {
     if (!tournament) return [];
     
-    const isIndividual = tournament.format.includes('individual');
+    const isIndividual = tournament.format.includes('individual') || tournament.format === 'mexicano';
     
     // Reset player scores
     const playerMap = {};

@@ -6,6 +6,11 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
   const isPointsMode = match.scoringMode === 'points';
   const isTennisMode = match.scoringMode === 'tennis';
 
+  const getPlayerName = (p) => {
+    if (!p) return '';
+    return typeof p === 'object' ? p.name : p;
+  };
+
   // Core Match State
   const [teamAScore, setTeamAScore] = React.useState(match.score.teamAScore || 0);
   const [teamBScore, setTeamBScore] = React.useState(match.score.teamBScore || 0);
@@ -445,7 +450,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
             
             {/* Team Roster */}
             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
-              {match.teamA[0]} {match.teamA[1] && `+ ${match.teamA[1]}`}
+              {getPlayerName(match.teamA[0])} {match.teamA[1] && getPlayerName(match.teamA[1]) && `+ ${getPlayerName(match.teamA[1])}`}
             </div>
 
             {/* Set games if in progress */}
@@ -477,7 +482,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
             
             {/* Team Roster */}
             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', opacity: 0.9 }}>
-              {match.teamB[0]} {match.teamB[1] && `+ ${match.teamB[1]}`}
+              {getPlayerName(match.teamB[0])} {match.teamB[1] && getPlayerName(match.teamB[1]) && `+ ${getPlayerName(match.teamB[1])}`}
             </div>
 
             {/* Set games if in progress */}
