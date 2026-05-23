@@ -36,20 +36,23 @@ const SpeechAnnouncer = {
     // Stop any ongoing speech
     window.speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = 1.05; // Slightly faster for referee feel
-    utterance.pitch = 1.0;
-    
-    // Attempt to pick a suitable voice
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      // Look for a voice matching the desired locale
-      const match = voices.find(v => v.lang.startsWith(lang));
-      if (match) utterance.voice = match;
-    }
-    
-    window.speechSynthesis.speak(utterance);
+    // Use a small timeout to avoid the browser's SpeechSynthesis deadlock bug
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 1.05; // Slightly faster for referee feel
+      utterance.pitch = 1.0;
+      
+      // Attempt to pick a suitable voice
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Look for a voice matching the desired locale
+        const match = voices.find(v => v.lang.startsWith(lang));
+        if (match) utterance.voice = match;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   },
   
   announceScore: (scoreA, scoreB, isTennis = false, isGoldenPoint = false, lang = 'en-US') => {

@@ -39,20 +39,23 @@ const SpeechAnnouncer = {
     // Stop any ongoing speech
     window.speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = 1.05; // Slightly faster for referee feel
-    utterance.pitch = 1.0;
-    
-    // Attempt to pick a suitable voice
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      // Look for a voice matching the desired locale
-      const match = voices.find(v => v.lang.startsWith(lang));
-      if (match) utterance.voice = match;
-    }
-    
-    window.speechSynthesis.speak(utterance);
+    // Use a small timeout to avoid the browser's SpeechSynthesis deadlock bug
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 1.05; // Slightly faster for referee feel
+      utterance.pitch = 1.0;
+      
+      // Attempt to pick a suitable voice
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Look for a voice matching the desired locale
+        const match = voices.find(v => v.lang.startsWith(lang));
+        if (match) utterance.voice = match;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   },
   
   announceScore: (scoreA, scoreB, isTennis = false, isGoldenPoint = false, lang = 'en-US') => {
@@ -1500,8 +1503,20 @@ window.SetupScreen = SetupScreen;
 /* --- START FILE: active-matches.jsx --- */
 /* screens/active-matches.jsx — Active Match Schedule Grid */
 
-function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard, onEditTournament }) {
-  const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
+function ActiveMatchesScreen({ 
+  tweaks, 
+  tournament, 
+  onBack, 
+  onCancelTournament, 
+  onSelectMatch, 
+  onViewLeaderboard, 
+  onEditTournament,
+  activeRoundIndex: propActiveRoundIndex,
+  setActiveRoundIndex: propSetActiveRoundIndex
+}) {
+  const [localRoundIndex, setLocalRoundIndex] = React.useState(0);
+  const activeRoundIndex = propActiveRoundIndex !== undefined ? propActiveRoundIndex : localRoundIndex;
+  const setActiveRoundIndex = propSetActiveRoundIndex !== undefined ? propSetActiveRoundIndex : setLocalRoundIndex;
 
   const rounds = tournament && tournament.rounds ? tournament.rounds : [];
   const totalRounds = rounds.length;
@@ -3837,6 +3852,7 @@ function App() {
   
   // Active Tournament & Standalone Match States
   const [activeTournament, setActiveTournament] = React.useState(null);
+  const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
   const [activeMatch, setActiveMatch] = React.useState(null); // Used for standalone game scoring
   const [activeTournamentMatch, setActiveTournamentMatch] = React.useState(null); // Used to hook active scorer back into the tournament
   const [tournamentHistory, setTournamentHistory] = React.useState([]);
@@ -3867,6 +3883,16 @@ function App() {
         // If it's legacy data without rounds, we purge it cleanly rather than crashing.
         if (parsed && Array.isArray(parsed.rounds)) {
           setActiveTournament(parsed);
+          // Smart self-healing bootloader: automatically restore to the first incomplete round
+          let firstIncompleteRoundIdx = 0;
+          for (let i = 0; i < parsed.rounds.length; i++) {
+            const hasIncomplete = parsed.rounds[i].matches.some(m => !m.completed);
+            if (hasIncomplete) {
+              firstIncompleteRoundIdx = i;
+              break;
+            }
+          }
+          setActiveRoundIndex(firstIncompleteRoundIdx);
           setCurrentScreen('active-matches');
         } else {
           console.warn("Detected legacy/corrupt active tournament state. Purging automatically.");
@@ -3909,6 +3935,7 @@ function App() {
   };
 
   const handleStartTournament = (config) => {
+    setActiveRoundIndex(0);
     updateTournamentState(config);
     setCurrentScreen('active-matches');
   };
@@ -3976,8 +4003,11 @@ function App() {
               tweaks={tweaks}
               tournament={activeTournament}
               onBack={handleBackToDashboard}
+              activeRoundIndex={activeRoundIndex}
+              setActiveRoundIndex={setActiveRoundIndex}
               onCancelTournament={() => {
                 if (confirm("Are you sure you want to end this tournament? Standings will be lost.")) {
+                  setActiveRoundIndex(0);
                   updateTournamentState(null);
                   setCurrentScreen('dashboard');
                 }

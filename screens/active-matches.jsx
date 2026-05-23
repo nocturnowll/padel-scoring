@@ -1,7 +1,19 @@
 /* screens/active-matches.jsx — Active Match Schedule Grid */
 
-function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, onSelectMatch, onViewLeaderboard, onEditTournament }) {
-  const [activeRoundIndex, setActiveRoundIndex] = React.useState(0);
+function ActiveMatchesScreen({ 
+  tweaks, 
+  tournament, 
+  onBack, 
+  onCancelTournament, 
+  onSelectMatch, 
+  onViewLeaderboard, 
+  onEditTournament,
+  activeRoundIndex: propActiveRoundIndex,
+  setActiveRoundIndex: propSetActiveRoundIndex
+}) {
+  const [localRoundIndex, setLocalRoundIndex] = React.useState(0);
+  const activeRoundIndex = propActiveRoundIndex !== undefined ? propActiveRoundIndex : localRoundIndex;
+  const setActiveRoundIndex = propSetActiveRoundIndex !== undefined ? propSetActiveRoundIndex : setLocalRoundIndex;
 
   const rounds = tournament && tournament.rounds ? tournament.rounds : [];
   const totalRounds = rounds.length;
