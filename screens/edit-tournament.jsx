@@ -112,10 +112,17 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   const getRecalculatedSittingOut = (roundMatches, currentPlayers) => {
     const playingIds = new Set();
     roundMatches.forEach(m => {
-      if (m.teamA.p1 && m.teamA.p1.id) playingIds.add(m.teamA.p1.id);
-      if (m.teamA.p2 && m.teamA.p2.id) playingIds.add(m.teamA.p2.id);
-      if (m.teamB.p1 && m.teamB.p1.id) playingIds.add(m.teamB.p1.id);
-      if (m.teamB.p2 && m.teamB.p2.id) playingIds.add(m.teamB.p2.id);
+      if (tournament.format === 'team_americano') {
+        const teamIdA = m.rawTeamA?.id || m.teamA.p1?.id;
+        const teamIdB = m.rawTeamB?.id || m.teamB.p1?.id;
+        if (teamIdA) playingIds.add(teamIdA);
+        if (teamIdB) playingIds.add(teamIdB);
+      } else {
+        if (m.teamA.p1 && m.teamA.p1.id) playingIds.add(m.teamA.p1.id);
+        if (m.teamA.p2 && m.teamA.p2.id) playingIds.add(m.teamA.p2.id);
+        if (m.teamB.p1 && m.teamB.p1.id) playingIds.add(m.teamB.p1.id);
+        if (m.teamB.p2 && m.teamB.p2.id) playingIds.add(m.teamB.p2.id);
+      }
     });
     return currentPlayers.filter(p => !playingIds.has(p.id));
   };
@@ -223,8 +230,14 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
             activeMatches.push({
               id: `r${rIdx + 1}_m_gen_${Date.now()}_${m}`,
               court: courtNum,
-              teamA: { p1: { id: matchPlayers[0].id, name: matchPlayers[0].name }, p2: { id: '', name: '' } },
-              teamB: { p1: { id: matchPlayers[1].id, name: matchPlayers[1].name }, p2: { id: '', name: '' } },
+              teamA: { 
+                p1: { id: matchPlayers[0].p1?.id || matchPlayers[0].id, name: matchPlayers[0].p1?.name || matchPlayers[0].name }, 
+                p2: { id: matchPlayers[0].p2?.id || '', name: matchPlayers[0].p2?.name || '' } 
+              },
+              teamB: { 
+                p1: { id: matchPlayers[1].p1?.id || matchPlayers[1].id, name: matchPlayers[1].p1?.name || matchPlayers[1].name }, 
+                p2: { id: matchPlayers[1].p2?.id || '', name: matchPlayers[1].p2?.name || '' } 
+              },
               score: null,
               completed: false,
               rawTeamA: matchPlayers[0],
@@ -357,6 +370,36 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   // ──────────────────────────────────────────────────────────────────────────
   // Tab 3: Pairings Editor logic (Change court or players)
   // ──────────────────────────────────────────────────────────────────────────
+  const handleMatchTeamChange = (mIdx, team, selectedTeamId) => {
+    const selectedTeam = players.find(t => t.id === selectedTeamId) || { id: '', name: '', p1: { id: '', name: '' }, p2: { id: '', name: '' } };
+    
+    const updatedRounds = rounds.map((round, rIdx) => {
+      if (rIdx !== activeRoundIdx) return round;
+      
+      const updatedMatches = round.matches.map((match, idx) => {
+        if (idx !== mIdx) return match;
+        
+        return {
+          ...match,
+          [team]: {
+            p1: { id: selectedTeam.p1?.id || selectedTeam.id, name: selectedTeam.p1?.name || selectedTeam.name },
+            p2: { id: selectedTeam.p2?.id || '', name: selectedTeam.p2?.name || '' }
+          },
+          [team === 'teamA' ? 'rawTeamA' : 'rawTeamB']: selectedTeam
+        };
+      });
+
+      return {
+        ...round,
+        matches: updatedMatches,
+        sittingOut: getRecalculatedSittingOut(updatedMatches, players)
+      };
+    });
+
+    setRounds(updatedRounds);
+    setErrorMessage('');
+  };
+
   const handleMatchPlayerChange = (mIdx, team, slot, selectedId) => {
     const selectedPlayer = players.find(p => p.id === selectedId) || { id: '', name: '' };
     
@@ -409,10 +452,17 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       
       for (let m = 0; m < round.matches.length; m++) {
         const match = round.matches[m];
-        if (match.teamA.p1 && match.teamA.p1.id) assignedIds.push(match.teamA.p1.id);
-        if (match.teamA.p2 && match.teamA.p2.id) assignedIds.push(match.teamA.p2.id);
-        if (match.teamB.p1 && match.teamB.p1.id) assignedIds.push(match.teamB.p1.id);
-        if (match.teamB.p2 && match.teamB.p2.id) assignedIds.push(match.teamB.p2.id);
+        if (tournament.format === 'team_americano') {
+          const teamIdA = match.rawTeamA?.id || match.teamA.p1?.id;
+          const teamIdB = match.rawTeamB?.id || match.teamB.p1?.id;
+          if (teamIdA) assignedIds.push(teamIdA);
+          if (teamIdB) assignedIds.push(teamIdB);
+        } else {
+          if (match.teamA.p1 && match.teamA.p1.id) assignedIds.push(match.teamA.p1.id);
+          if (match.teamA.p2 && match.teamA.p2.id) assignedIds.push(match.teamA.p2.id);
+          if (match.teamB.p1 && match.teamB.p1.id) assignedIds.push(match.teamB.p1.id);
+          if (match.teamB.p2 && match.teamB.p2.id) assignedIds.push(match.teamB.p2.id);
+        }
       }
       
       // Look for duplicate IDs in assignedIds
@@ -420,7 +470,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       if (uniqueIds.size !== assignedIds.length) {
         // Find which ID is duplicate
         const dupId = assignedIds.find((id, idx) => assignedIds.indexOf(id) !== idx);
-        const dupPlayerName = players.find(p => p.id === dupId)?.name || "Unknown Player";
+        const dupPlayerName = players.find(p => p.id === dupId)?.name || "Unknown Player/Team";
         setErrorMessage(`Duplicate warning: "${dupPlayerName}" is booked multiple times in Round ${r + 1}. Resolve the duplicate before saving.`);
         setActiveTab('pairings');
         setActiveRoundIdx(r);
@@ -725,76 +775,115 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                       {/* Doubles Teams Pairings editor grid */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         
-                        {/* TEAM A */}
-                        <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
-                          <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A Players</div>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                        {tournament.format === 'team_americano' ? (
+                          <>
+                            {/* TEAM A */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A</div>
                               <select 
                                 className="ag-select"
-                                value={match.teamA.p1?.id || ''}
+                                value={match.rawTeamA?.id || match.teamA.p1?.id || ''}
                                 disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p1', e.target.value)}
+                                onChange={(e) => handleMatchTeamChange(mIdx, 'teamA', e.target.value)}
                                 style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
                               >
-                                <option value="">-- Empty --</option>
+                                <option value="">-- Select Team --</option>
                                 {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
-                              <select 
-                                className="ag-select"
-                                value={match.teamA.p2?.id || ''}
-                                disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p2', e.target.value)}
-                                style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
-                              >
-                                <option value="">-- Empty --</option>
-                                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* VS BAR */}
-                        <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
+                            {/* VS BAR */}
+                            <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
 
-                        {/* TEAM B */}
-                        <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
-                          <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B Players</div>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                            {/* TEAM B */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B</div>
                               <select 
                                 className="ag-select"
-                                value={match.teamB.p1?.id || ''}
+                                value={match.rawTeamB?.id || match.teamB.p1?.id || ''}
                                 disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p1', e.target.value)}
+                                onChange={(e) => handleMatchTeamChange(mIdx, 'teamB', e.target.value)}
                                 style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
                               >
-                                <option value="">-- Empty --</option>
+                                <option value="">-- Select Team --</option>
                                 {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
-                              <select 
-                                className="ag-select"
-                                value={match.teamB.p2?.id || ''}
-                                disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p2', e.target.value)}
-                                style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
-                              >
-                                <option value="">-- Empty --</option>
-                                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
+                          </>
+                        ) : (
+                          <>
+                            {/* TEAM A */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A Players</div>
+                              
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamA.p1?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p1', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamA.p2?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p2', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
+
+                            {/* VS BAR */}
+                            <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
+
+                            {/* TEAM B */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B Players</div>
+                              
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamB.p1?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p1', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamB.p2?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p2', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
 
                       </div>
 

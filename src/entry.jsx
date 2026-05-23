@@ -225,24 +225,32 @@ const Matchmaker = {
     const T = teamNames.length;
     if (T < 2) return null;
     
-    const teams = teamNames.map((name, index) => ({
-      id: `team_${index + 1}`,
-      name: name,
-      points: 0,
-      diff: 0,
-      played: 0,
-      won: 0,
-      lost: 0
-    }));
+    // Group individual players into fixed doubles teams of 2 players
+    const teams = [];
+    for (let i = 0; i < T; i += 2) {
+      const p1Name = teamNames[i];
+      const p2Name = teamNames[i + 1] || '';
+      teams.push({
+        id: `team_${Math.floor(i/2) + 1}`,
+        name: p2Name ? `${p1Name} + ${p2Name}` : p1Name,
+        p1: { id: `p_${i + 1}`, name: p1Name },
+        p2: p2Name ? { id: `p_${i + 2}`, name: p2Name } : { id: '', name: '' },
+        points: 0,
+        diff: 0,
+        played: 0,
+        won: 0,
+        lost: 0
+      });
+    }
     
-    // Standard round-robin scheduling algorithm (Berger tables / Circle method)
+    const numTeams = teams.length;
     const list = [...teams];
-    if (T % 2 !== 0) {
+    if (numTeams % 2 !== 0) {
       list.push({ id: 'bye', name: 'BYE', isDummy: true });
     }
     
-    const numTeams = list.length;
-    const numRounds = numTeams - 1;
+    const numTeamsWithBye = list.length;
+    const numRounds = numTeamsWithBye - 1;
     const rounds = [];
     
     for (let r = 0; r < numRounds; r++) {
@@ -250,23 +258,34 @@ const Matchmaker = {
       const sittingOut = [];
       let courtIndex = 1;
       
-      for (let i = 0; i < numTeams / 2; i++) {
+      for (let i = 0; i < numTeamsWithBye / 2; i++) {
         const t1 = list[i];
-        const t2 = list[numTeams - 1 - i];
+        const t2 = list[numTeamsWithBye - 1 - i];
         
         if (t1.id === 'bye') {
-          if (!t2.isDummy) sittingOut.push(t2);
+          if (!t2.isDummy) {
+            if (t2.p1?.name) sittingOut.push(t2.p1.name);
+            if (t2.p2?.name) sittingOut.push(t2.p2.name);
+          }
         } else if (t2.id === 'bye') {
-          if (!t1.isDummy) sittingOut.push(t1);
+          if (!t1.isDummy) {
+            if (t1.p1?.name) sittingOut.push(t1.p1.name);
+            if (t1.p2?.name) sittingOut.push(t1.p2.name);
+          }
         } else {
           // Both are real teams
           if (courtIndex <= courtsCount) {
             roundMatches.push({
               id: `r${r+1}_m${courtIndex}`,
               court: courtIndex,
-              // Map team object to a doubles format (can represent 2 players conceptually)
-              teamA: { p1: { name: t1.name, id: t1.id }, p2: { name: '', id: '' } },
-              teamB: { p1: { name: t2.name, id: t2.id }, p2: { name: '', id: '' } },
+              teamA: { 
+                p1: { name: t1.p1.name, id: t1.p1.id }, 
+                p2: { name: t1.p2.name, id: t1.p2.id } 
+              },
+              teamB: { 
+                p1: { name: t2.p1.name, id: t2.p1.id }, 
+                p2: { name: t2.p2.name, id: t2.p2.id } 
+              },
               score: null,
               completed: false,
               rawTeamA: t1,
@@ -275,7 +294,10 @@ const Matchmaker = {
             courtIndex++;
           } else {
             // No courts left, they sit out
-            sittingOut.push(t1, t2);
+            if (t1.p1?.name) sittingOut.push(t1.p1.name);
+            if (t1.p2?.name) sittingOut.push(t1.p2.name);
+            if (t2.p1?.name) sittingOut.push(t2.p1.name);
+            if (t2.p2?.name) sittingOut.push(t2.p2.name);
           }
         }
       }
@@ -1190,28 +1212,28 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   <div className="ag-sets-grid">
                     <button 
                       className={`ag-pill ${setsFormat === 'best3' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best3')}
+                      onClick={() => { setSetsFormat('best3'); setGamesPerSet(3); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO3
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best4' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best4')}
+                      onClick={() => { setSetsFormat('best4'); setGamesPerSet(4); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO4
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best5' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best5')}
+                      onClick={() => { setSetsFormat('best5'); setGamesPerSet(5); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO5
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'first3' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('first3')}
+                      onClick={() => { setSetsFormat('first3'); setGamesPerSet(3); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       First to 3
@@ -1598,6 +1620,9 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 const score = match.score || {};
                 const scoreA = hasScore && score.teamAScore !== undefined ? score.teamAScore : 0;
                 const scoreB = hasScore && score.teamBScore !== undefined ? score.teamBScore : 0;
+                const currentGameA = score.currentGameA || 0;
+                const currentGameB = score.currentGameB || 0;
+                const isTiebreaker = score.isTiebreaker || false;
                 const sets = score.sets || [];
                 
                 return (
@@ -1643,7 +1668,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           {tournament.scoringMode === 'tennis' ? (
                             /* Traditional Sets view */
-                            <div style={{ display: 'flex', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                               {sets.map((set, sIdx) => (
                                 <div key={sIdx} className="ag-inset" style={{ padding: '4px 8px', fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 600 }}>
                                   {set.teamA} - {set.teamB}
@@ -1651,8 +1676,13 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                               ))}
                               {/* Live Score if in-progress */}
                               {!match.completed && (
-                                <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4 }}>
-                                  {scoreA} - {scoreB}
+                                <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>{currentGameA} - {currentGameB}</span>
+                                  {((scoreA !== 0 || scoreB !== 0 || isTiebreaker) && (
+                                    <span style={{ fontSize: 9.5, opacity: 0.85 }}>
+                                      ({isTiebreaker ? `TB:${scoreA}-${scoreB}` : `${scoreA}-${scoreB}`})
+                                    </span>
+                                  ))}
                                 </div>
                               )}
                             </div>
@@ -1862,10 +1892,17 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   const getRecalculatedSittingOut = (roundMatches, currentPlayers) => {
     const playingIds = new Set();
     roundMatches.forEach(m => {
-      if (m.teamA.p1 && m.teamA.p1.id) playingIds.add(m.teamA.p1.id);
-      if (m.teamA.p2 && m.teamA.p2.id) playingIds.add(m.teamA.p2.id);
-      if (m.teamB.p1 && m.teamB.p1.id) playingIds.add(m.teamB.p1.id);
-      if (m.teamB.p2 && m.teamB.p2.id) playingIds.add(m.teamB.p2.id);
+      if (tournament.format === 'team_americano') {
+        const teamIdA = m.rawTeamA?.id || m.teamA.p1?.id;
+        const teamIdB = m.rawTeamB?.id || m.teamB.p1?.id;
+        if (teamIdA) playingIds.add(teamIdA);
+        if (teamIdB) playingIds.add(teamIdB);
+      } else {
+        if (m.teamA.p1 && m.teamA.p1.id) playingIds.add(m.teamA.p1.id);
+        if (m.teamA.p2 && m.teamA.p2.id) playingIds.add(m.teamA.p2.id);
+        if (m.teamB.p1 && m.teamB.p1.id) playingIds.add(m.teamB.p1.id);
+        if (m.teamB.p2 && m.teamB.p2.id) playingIds.add(m.teamB.p2.id);
+      }
     });
     return currentPlayers.filter(p => !playingIds.has(p.id));
   };
@@ -1973,8 +2010,14 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
             activeMatches.push({
               id: `r${rIdx + 1}_m_gen_${Date.now()}_${m}`,
               court: courtNum,
-              teamA: { p1: { id: matchPlayers[0].id, name: matchPlayers[0].name }, p2: { id: '', name: '' } },
-              teamB: { p1: { id: matchPlayers[1].id, name: matchPlayers[1].name }, p2: { id: '', name: '' } },
+              teamA: { 
+                p1: { id: matchPlayers[0].p1?.id || matchPlayers[0].id, name: matchPlayers[0].p1?.name || matchPlayers[0].name }, 
+                p2: { id: matchPlayers[0].p2?.id || '', name: matchPlayers[0].p2?.name || '' } 
+              },
+              teamB: { 
+                p1: { id: matchPlayers[1].p1?.id || matchPlayers[1].id, name: matchPlayers[1].p1?.name || matchPlayers[1].name }, 
+                p2: { id: matchPlayers[1].p2?.id || '', name: matchPlayers[1].p2?.name || '' } 
+              },
               score: null,
               completed: false,
               rawTeamA: matchPlayers[0],
@@ -2107,6 +2150,36 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   // ──────────────────────────────────────────────────────────────────────────
   // Tab 3: Pairings Editor logic (Change court or players)
   // ──────────────────────────────────────────────────────────────────────────
+  const handleMatchTeamChange = (mIdx, team, selectedTeamId) => {
+    const selectedTeam = players.find(t => t.id === selectedTeamId) || { id: '', name: '', p1: { id: '', name: '' }, p2: { id: '', name: '' } };
+    
+    const updatedRounds = rounds.map((round, rIdx) => {
+      if (rIdx !== activeRoundIdx) return round;
+      
+      const updatedMatches = round.matches.map((match, idx) => {
+        if (idx !== mIdx) return match;
+        
+        return {
+          ...match,
+          [team]: {
+            p1: { id: selectedTeam.p1?.id || selectedTeam.id, name: selectedTeam.p1?.name || selectedTeam.name },
+            p2: { id: selectedTeam.p2?.id || '', name: selectedTeam.p2?.name || '' }
+          },
+          [team === 'teamA' ? 'rawTeamA' : 'rawTeamB']: selectedTeam
+        };
+      });
+
+      return {
+        ...round,
+        matches: updatedMatches,
+        sittingOut: getRecalculatedSittingOut(updatedMatches, players)
+      };
+    });
+
+    setRounds(updatedRounds);
+    setErrorMessage('');
+  };
+
   const handleMatchPlayerChange = (mIdx, team, slot, selectedId) => {
     const selectedPlayer = players.find(p => p.id === selectedId) || { id: '', name: '' };
     
@@ -2159,10 +2232,17 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       
       for (let m = 0; m < round.matches.length; m++) {
         const match = round.matches[m];
-        if (match.teamA.p1 && match.teamA.p1.id) assignedIds.push(match.teamA.p1.id);
-        if (match.teamA.p2 && match.teamA.p2.id) assignedIds.push(match.teamA.p2.id);
-        if (match.teamB.p1 && match.teamB.p1.id) assignedIds.push(match.teamB.p1.id);
-        if (match.teamB.p2 && match.teamB.p2.id) assignedIds.push(match.teamB.p2.id);
+        if (tournament.format === 'team_americano') {
+          const teamIdA = match.rawTeamA?.id || match.teamA.p1?.id;
+          const teamIdB = match.rawTeamB?.id || match.teamB.p1?.id;
+          if (teamIdA) assignedIds.push(teamIdA);
+          if (teamIdB) assignedIds.push(teamIdB);
+        } else {
+          if (match.teamA.p1 && match.teamA.p1.id) assignedIds.push(match.teamA.p1.id);
+          if (match.teamA.p2 && match.teamA.p2.id) assignedIds.push(match.teamA.p2.id);
+          if (match.teamB.p1 && match.teamB.p1.id) assignedIds.push(match.teamB.p1.id);
+          if (match.teamB.p2 && match.teamB.p2.id) assignedIds.push(match.teamB.p2.id);
+        }
       }
       
       // Look for duplicate IDs in assignedIds
@@ -2170,7 +2250,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
       if (uniqueIds.size !== assignedIds.length) {
         // Find which ID is duplicate
         const dupId = assignedIds.find((id, idx) => assignedIds.indexOf(id) !== idx);
-        const dupPlayerName = players.find(p => p.id === dupId)?.name || "Unknown Player";
+        const dupPlayerName = players.find(p => p.id === dupId)?.name || "Unknown Player/Team";
         setErrorMessage(`Duplicate warning: "${dupPlayerName}" is booked multiple times in Round ${r + 1}. Resolve the duplicate before saving.`);
         setActiveTab('pairings');
         setActiveRoundIdx(r);
@@ -2475,76 +2555,115 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                       {/* Doubles Teams Pairings editor grid */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         
-                        {/* TEAM A */}
-                        <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
-                          <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A Players</div>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                        {tournament.format === 'team_americano' ? (
+                          <>
+                            {/* TEAM A */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A</div>
                               <select 
                                 className="ag-select"
-                                value={match.teamA.p1?.id || ''}
+                                value={match.rawTeamA?.id || match.teamA.p1?.id || ''}
                                 disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p1', e.target.value)}
+                                onChange={(e) => handleMatchTeamChange(mIdx, 'teamA', e.target.value)}
                                 style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
                               >
-                                <option value="">-- Empty --</option>
+                                <option value="">-- Select Team --</option>
                                 {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
-                              <select 
-                                className="ag-select"
-                                value={match.teamA.p2?.id || ''}
-                                disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p2', e.target.value)}
-                                style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
-                              >
-                                <option value="">-- Empty --</option>
-                                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* VS BAR */}
-                        <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
+                            {/* VS BAR */}
+                            <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
 
-                        {/* TEAM B */}
-                        <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
-                          <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B Players</div>
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                            {/* TEAM B */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B</div>
                               <select 
                                 className="ag-select"
-                                value={match.teamB.p1?.id || ''}
+                                value={match.rawTeamB?.id || match.teamB.p1?.id || ''}
                                 disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p1', e.target.value)}
+                                onChange={(e) => handleMatchTeamChange(mIdx, 'teamB', e.target.value)}
                                 style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
                               >
-                                <option value="">-- Empty --</option>
+                                <option value="">-- Select Team --</option>
                                 {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                               </select>
                             </div>
-                            <div>
-                              <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
-                              <select 
-                                className="ag-select"
-                                value={match.teamB.p2?.id || ''}
-                                disabled={isLocked}
-                                onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p2', e.target.value)}
-                                style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
-                              >
-                                <option value="">-- Empty --</option>
-                                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
+                          </>
+                        ) : (
+                          <>
+                            {/* TEAM A */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team A Players</div>
+                              
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamA.p1?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p1', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamA.p2?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamA', 'p2', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
+
+                            {/* VS BAR */}
+                            <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', margin: '2px 0' }}>VS</div>
+
+                            {/* TEAM B */}
+                            <div className="ag-inset" style={{ padding: 10, background: 'rgba(0,0,0,0.1)' }}>
+                              <div className="ag-eyebrow" style={{ fontSize: 8.5, marginBottom: 6, color: 'var(--brand-primary)' }}>Team B Players</div>
+                              
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 1</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamB.p1?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p1', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 2, display: 'block' }}>Player 2 (Optional)</label>
+                                  <select 
+                                    className="ag-select"
+                                    value={match.teamB.p2?.id || ''}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleMatchPlayerChange(mIdx, 'teamB', 'p2', e.target.value)}
+                                    style={{ width: '100%', fontSize: 11, height: 28, padding: '2px 6px' }}
+                                  >
+                                    <option value="">-- Empty --</option>
+                                    {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
 
                       </div>
 
@@ -2988,16 +3107,21 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     const fmt = match.rules.setsFormat || 'best3';
     let isMatchOver = false;
 
-    if (fmt === 'best3') {
-      if (setsWonA === 2 || setsWonB === 2) isMatchOver = true;
-    } else if (fmt === 'best4') {
-      // 4 sets total. Matches can end 3-1, 3-0, or 2-2 tie!
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
-      else if (updatedSets.length === 4) isMatchOver = true; // Ended in 2-2 tie
-    } else if (fmt === 'best5') {
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
-    } else if (fmt === 'first3') {
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+    if (match.isTournament) {
+      // For tournament matches, we play a single set. Once 1 set is completed, the match is over!
+      if (setsWonA === 1 || setsWonB === 1) isMatchOver = true;
+    } else {
+      if (fmt === 'best3') {
+        if (setsWonA === 2 || setsWonB === 2) isMatchOver = true;
+      } else if (fmt === 'best4') {
+        // 4 sets total. Matches can end 3-1, 3-0, or 2-2 tie!
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+        else if (updatedSets.length === 4) isMatchOver = true; // Ended in 2-2 tie
+      } else if (fmt === 'best5') {
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+      } else if (fmt === 'first3') {
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+      }
     }
 
     if (isMatchOver) {

@@ -120,6 +120,9 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 const score = match.score || {};
                 const scoreA = hasScore && score.teamAScore !== undefined ? score.teamAScore : 0;
                 const scoreB = hasScore && score.teamBScore !== undefined ? score.teamBScore : 0;
+                const currentGameA = score.currentGameA || 0;
+                const currentGameB = score.currentGameB || 0;
+                const isTiebreaker = score.isTiebreaker || false;
                 const sets = score.sets || [];
                 
                 return (
@@ -165,7 +168,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           {tournament.scoringMode === 'tennis' ? (
                             /* Traditional Sets view */
-                            <div style={{ display: 'flex', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                               {sets.map((set, sIdx) => (
                                 <div key={sIdx} className="ag-inset" style={{ padding: '4px 8px', fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 600 }}>
                                   {set.teamA} - {set.teamB}
@@ -173,8 +176,13 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                               ))}
                               {/* Live Score if in-progress */}
                               {!match.completed && (
-                                <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4 }}>
-                                  {scoreA} - {scoreB}
+                                <div className="ag-badge ag-badge-brand" style={{ fontFamily: 'JetBrains Mono', marginLeft: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>{currentGameA} - {currentGameB}</span>
+                                  {((scoreA !== 0 || scoreB !== 0 || isTiebreaker) && (
+                                    <span style={{ fontSize: 9.5, opacity: 0.85 }}>
+                                      ({isTiebreaker ? `TB:${scoreA}-${scoreB}` : `${scoreA}-${scoreB}`})
+                                    </span>
+                                  ))}
                                 </div>
                               )}
                             </div>

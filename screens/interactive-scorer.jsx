@@ -394,16 +394,21 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
     const fmt = match.rules.setsFormat || 'best3';
     let isMatchOver = false;
 
-    if (fmt === 'best3') {
-      if (setsWonA === 2 || setsWonB === 2) isMatchOver = true;
-    } else if (fmt === 'best4') {
-      // 4 sets total. Matches can end 3-1, 3-0, or 2-2 tie!
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
-      else if (updatedSets.length === 4) isMatchOver = true; // Ended in 2-2 tie
-    } else if (fmt === 'best5') {
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
-    } else if (fmt === 'first3') {
-      if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+    if (match.isTournament) {
+      // For tournament matches, we play a single set. Once 1 set is completed, the match is over!
+      if (setsWonA === 1 || setsWonB === 1) isMatchOver = true;
+    } else {
+      if (fmt === 'best3') {
+        if (setsWonA === 2 || setsWonB === 2) isMatchOver = true;
+      } else if (fmt === 'best4') {
+        // 4 sets total. Matches can end 3-1, 3-0, or 2-2 tie!
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+        else if (updatedSets.length === 4) isMatchOver = true; // Ended in 2-2 tie
+      } else if (fmt === 'best5') {
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+      } else if (fmt === 'first3') {
+        if (setsWonA === 3 || setsWonB === 3) isMatchOver = true;
+      }
     }
 
     if (isMatchOver) {

@@ -392,28 +392,28 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   <div className="ag-sets-grid">
                     <button 
                       className={`ag-pill ${setsFormat === 'best3' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best3')}
+                      onClick={() => { setSetsFormat('best3'); setGamesPerSet(3); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO3
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best4' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best4')}
+                      onClick={() => { setSetsFormat('best4'); setGamesPerSet(4); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO4
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best5' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('best5')}
+                      onClick={() => { setSetsFormat('best5'); setGamesPerSet(5); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       BO5
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'first3' ? 'ag-pill-active' : ''}`}
-                      onClick={() => setSetsFormat('first3')}
+                      onClick={() => { setSetsFormat('first3'); setGamesPerSet(3); }}
                       style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
                       First to 3

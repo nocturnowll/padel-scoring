@@ -222,24 +222,32 @@ const Matchmaker = {
     const T = teamNames.length;
     if (T < 2) return null;
     
-    const teams = teamNames.map((name, index) => ({
-      id: `team_${index + 1}`,
-      name: name,
-      points: 0,
-      diff: 0,
-      played: 0,
-      won: 0,
-      lost: 0
-    }));
+    // Group individual players into fixed doubles teams of 2 players
+    const teams = [];
+    for (let i = 0; i < T; i += 2) {
+      const p1Name = teamNames[i];
+      const p2Name = teamNames[i + 1] || '';
+      teams.push({
+        id: `team_${Math.floor(i/2) + 1}`,
+        name: p2Name ? `${p1Name} + ${p2Name}` : p1Name,
+        p1: { id: `p_${i + 1}`, name: p1Name },
+        p2: p2Name ? { id: `p_${i + 2}`, name: p2Name } : { id: '', name: '' },
+        points: 0,
+        diff: 0,
+        played: 0,
+        won: 0,
+        lost: 0
+      });
+    }
     
-    // Standard round-robin scheduling algorithm (Berger tables / Circle method)
+    const numTeams = teams.length;
     const list = [...teams];
-    if (T % 2 !== 0) {
+    if (numTeams % 2 !== 0) {
       list.push({ id: 'bye', name: 'BYE', isDummy: true });
     }
     
-    const numTeams = list.length;
-    const numRounds = numTeams - 1;
+    const numTeamsWithBye = list.length;
+    const numRounds = numTeamsWithBye - 1;
     const rounds = [];
     
     for (let r = 0; r < numRounds; r++) {
@@ -247,23 +255,34 @@ const Matchmaker = {
       const sittingOut = [];
       let courtIndex = 1;
       
-      for (let i = 0; i < numTeams / 2; i++) {
+      for (let i = 0; i < numTeamsWithBye / 2; i++) {
         const t1 = list[i];
-        const t2 = list[numTeams - 1 - i];
+        const t2 = list[numTeamsWithBye - 1 - i];
         
         if (t1.id === 'bye') {
-          if (!t2.isDummy) sittingOut.push(t2);
+          if (!t2.isDummy) {
+            if (t2.p1?.name) sittingOut.push(t2.p1.name);
+            if (t2.p2?.name) sittingOut.push(t2.p2.name);
+          }
         } else if (t2.id === 'bye') {
-          if (!t1.isDummy) sittingOut.push(t1);
+          if (!t1.isDummy) {
+            if (t1.p1?.name) sittingOut.push(t1.p1.name);
+            if (t1.p2?.name) sittingOut.push(t1.p2.name);
+          }
         } else {
           // Both are real teams
           if (courtIndex <= courtsCount) {
             roundMatches.push({
               id: `r${r+1}_m${courtIndex}`,
               court: courtIndex,
-              // Map team object to a doubles format (can represent 2 players conceptually)
-              teamA: { p1: { name: t1.name, id: t1.id }, p2: { name: '', id: '' } },
-              teamB: { p1: { name: t2.name, id: t2.id }, p2: { name: '', id: '' } },
+              teamA: { 
+                p1: { name: t1.p1.name, id: t1.p1.id }, 
+                p2: { name: t1.p2.name, id: t1.p2.id } 
+              },
+              teamB: { 
+                p1: { name: t2.p1.name, id: t2.p1.id }, 
+                p2: { name: t2.p2.name, id: t2.p2.id } 
+              },
               score: null,
               completed: false,
               rawTeamA: t1,
@@ -272,7 +291,10 @@ const Matchmaker = {
             courtIndex++;
           } else {
             // No courts left, they sit out
-            sittingOut.push(t1, t2);
+            if (t1.p1?.name) sittingOut.push(t1.p1.name);
+            if (t1.p2?.name) sittingOut.push(t1.p2.name);
+            if (t2.p1?.name) sittingOut.push(t2.p1.name);
+            if (t2.p2?.name) sittingOut.push(t2.p2.name);
           }
         }
       }
