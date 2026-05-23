@@ -26,6 +26,26 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
   const [successMessage, setSuccessMessage] = React.useState('');
 
   // ──────────────────────────────────────────────────────────────────────────
+  // Automatically re-distribute pending matches across the new court amount
+  // ──────────────────────────────────────────────────────────────────────────
+  const handleCourtsCountChange = (newCount) => {
+    const count = parseInt(newCount) || 1;
+    setCourtsCount(count);
+    
+    const updatedRounds = rounds.map(round => {
+      let pendingMatchIdx = 0;
+      const updatedMatches = round.matches.map(match => {
+        if (match.completed) return match;
+        const assignedCourt = (pendingMatchIdx % count) + 1;
+        pendingMatchIdx++;
+        return { ...match, court: assignedCourt };
+      });
+      return { ...round, matches: updatedMatches };
+    });
+    setRounds(updatedRounds);
+  };
+
+  // ──────────────────────────────────────────────────────────────────────────
   // Recalculates who is sitting out for a given round based on active matches
   // ──────────────────────────────────────────────────────────────────────────
   const getRecalculatedSittingOut = (roundMatches, currentPlayers) => {
@@ -300,7 +320,7 @@ function EditTournamentScreen({ tweaks, tournament, onBack, onSave }) {
                       key={c}
                       type="button" 
                       className={`ag-pill ${courtsCount === c ? 'ag-pill-active' : ''}`}
-                      onClick={() => setCourtsCount(c)}
+                      onClick={() => handleCourtsCountChange(c)}
                       style={{ flex: 1, justifyContent: 'center', height: 38 }}
                     >
                       {c} {c === 1 ? 'Court' : 'Courts'}
