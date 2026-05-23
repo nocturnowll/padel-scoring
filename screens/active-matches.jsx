@@ -1,5 +1,189 @@
 /* screens/active-matches.jsx — Active Match Schedule Grid */
 
+// ──────────────────────────────────────────────────────────────────────────
+// Direct Score Input Modal Component
+// ──────────────────────────────────────────────────────────────────────────
+function DirectScoreModal({ tweaks, scoringMode, match, onCancel, onSave }) {
+  const isPointsMode = scoringMode === 'points';
+  
+  // Initialize scores
+  const hasScore = match.score !== null && match.score !== undefined;
+  const score = match.score || {};
+  
+  // Points mode defaults
+  const [pointsA, setPointsA] = React.useState(hasScore && isPointsMode ? (score.teamAScore || 0) : 0);
+  const [pointsB, setPointsB] = React.useState(hasScore && isPointsMode ? (score.teamBScore || 0) : 0);
+  
+  // Tennis mode defaults (games for set 1)
+  const existingSet = hasScore && !isPointsMode && score.sets && score.sets[0] ? score.sets[0] : null;
+  const [gamesA, setGamesA] = React.useState(existingSet ? (existingSet.teamA || 0) : 0);
+  const [gamesB, setGamesB] = React.useState(existingSet ? (existingSet.teamB || 0) : 0);
+
+  const handleSave = () => {
+    if (isPointsMode) {
+      onSave({
+        teamAScore: pointsA,
+        teamBScore: pointsB,
+        sets: [],
+        currentGameA: 0,
+        currentGameB: 0,
+        isTiebreaker: false,
+        tiebreakScoreA: 0,
+        tiebreakScoreB: 0
+      });
+    } else {
+      // Determine sets won
+      let setsWonA = 0;
+      let setsWonB = 0;
+      if (gamesA > gamesB) setsWonA = 1;
+      else if (gamesB > gamesA) setsWonB = 1;
+      
+      onSave({
+        teamAScore: setsWonA,
+        teamBScore: setsWonB,
+        sets: [{ teamA: gamesA, teamB: gamesB }],
+        currentGameA: 0,
+        currentGameB: 0,
+        isTiebreaker: false,
+        tiebreakScoreA: 0,
+        tiebreakScoreB: 0
+      });
+    }
+  };
+
+  return (
+    <div className="ag-modal-backdrop" style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(5, 7, 10, 0.85)',
+      backdropFilter: 'blur(12px)',
+      zIndex: 99999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16
+    }}>
+      <div className="ag-card" style={{
+        width: '100%',
+        maxWidth: 420,
+        padding: '24px 28px',
+        border: '1px solid var(--hairline-strong)',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20
+      }}>
+        
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--hairline-soft)', paddingBottom: 12 }}>
+          <h3 className="ag-h3" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="pencil" size={16} color="var(--brand-primary)" />
+            Direct Score Entry
+          </h3>
+          <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono', color: 'var(--brand-primary)', padding: '2px 8px', borderRadius: 6, background: 'rgba(163, 230, 53, 0.08)' }}>
+            CRT {match.court}
+          </span>
+        </div>
+
+        {/* Match Info */}
+        <div className="ag-inset" style={{ padding: '12px 14px', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, background: 'rgba(255,255,255,0.01)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontWeight: 600 }}>
+            <span>Team A</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{getTeamAPlayersString(match)}</span>
+          </div>
+          <div style={{ height: 1, background: 'var(--hairline-soft)', margin: '4px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontWeight: 600 }}>
+            <span>Team B</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{getTeamBPlayersString(match)}</span>
+          </div>
+        </div>
+
+        {/* Input Zone */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Enter Final {isPointsMode ? 'Points' : 'Games'} Score:
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            
+            {/* Team A Stepper */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Team A</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: 6, borderRadius: 6, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    if (isPointsMode) setPointsA(p => Math.max(0, p - 1));
+                    else setGamesA(g => Math.max(0, g - 1));
+                  }}
+                >
+                  <Icon name="minus" size={12} />
+                </button>
+                <span style={{ fontSize: 18, fontWeight: 700, fontFamily: 'JetBrains Mono', minWidth: 32, textAlign: 'center', color: '#fff' }}>
+                  {isPointsMode ? pointsA : gamesA}
+                </span>
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: 6, borderRadius: 6, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    if (isPointsMode) setPointsA(p => p + 1);
+                    else setGamesA(g => g + 1);
+                  }}
+                >
+                  <Icon name="plus" size={12} />
+                </button>
+              </div>
+            </div>
+
+            {/* Team B Stepper */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Team B</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 10, border: '1px solid var(--hairline)' }}>
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: 6, borderRadius: 6, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    if (isPointsMode) setPointsB(p => Math.max(0, p - 1));
+                    else setGamesB(g => Math.max(0, g - 1));
+                  }}
+                >
+                  <Icon name="minus" size={12} />
+                </button>
+                <span style={{ fontSize: 18, fontWeight: 700, fontFamily: 'JetBrains Mono', minWidth: 32, textAlign: 'center', color: '#fff' }}>
+                  {isPointsMode ? pointsB : gamesB}
+                </span>
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: 6, borderRadius: 6, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    if (isPointsMode) setPointsB(p => p + 1);
+                    else setGamesB(g => g + 1);
+                  }}
+                >
+                  <Icon name="plus" size={12} />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Modal Buttons */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+          <button className="ag-btn ag-btn-secondary" style={{ flex: 1 }} onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="ag-btn ag-btn-primary" style={{ flex: 1 }} onClick={handleSave}>
+            Save Score
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 function ActiveMatchesScreen({ 
   tweaks, 
   tournament, 
@@ -8,12 +192,15 @@ function ActiveMatchesScreen({
   onSelectMatch, 
   onViewLeaderboard, 
   onEditTournament,
+  onDirectSaveScore,
   activeRoundIndex: propActiveRoundIndex,
   setActiveRoundIndex: propSetActiveRoundIndex
 }) {
   const [localRoundIndex, setLocalRoundIndex] = React.useState(0);
   const activeRoundIndex = propActiveRoundIndex !== undefined ? propActiveRoundIndex : localRoundIndex;
   const setActiveRoundIndex = propSetActiveRoundIndex !== undefined ? propSetActiveRoundIndex : setLocalRoundIndex;
+
+  const [directEditMatch, setDirectEditMatch] = React.useState(null);
 
   const rounds = tournament && tournament.rounds ? tournament.rounds : [];
   const totalRounds = rounds.length;
@@ -211,9 +398,23 @@ function ActiveMatchesScreen({
                         <span className="ag-badge ag-badge-neutral" style={{ fontSize: 9.5 }}>Pending</span>
                       )}
                       
-                      <button className={`ag-btn ${match.completed ? 'ag-btn-ghost' : 'ag-btn-primary'} ag-btn-sm`}>
-                        {match.completed ? 'Edit Score' : 'Score Match'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          className={`ag-btn ${match.completed ? 'ag-btn-ghost' : 'ag-btn-primary'} ag-btn-sm`}
+                          onClick={() => onSelectMatch(match, activeRoundIndex, mIdx)}
+                          style={{ flex: 1 }}
+                        >
+                          {match.completed ? 'Live Scorer' : 'Score Live'}
+                        </button>
+                        <button 
+                          className="ag-btn ag-btn-secondary ag-btn-sm"
+                          style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Direct Score Entry"
+                          onClick={() => setDirectEditMatch({ match, roundIndex: activeRoundIndex, matchIndex: mIdx })}
+                        >
+                          <Icon name="pencil" size={14} />
+                        </button>
+                      </div>
                       
                     </div>
                   </div>
@@ -280,6 +481,22 @@ function ActiveMatchesScreen({
           </div>
 
         </div>
+
+        {/* Quick Direct Score Input Modal Overlay */}
+        {directEditMatch && (
+          <DirectScoreModal 
+            tweaks={tweaks}
+            scoringMode={tournament.scoringMode}
+            match={directEditMatch.match}
+            onCancel={() => setDirectEditMatch(null)}
+            onSave={(finalScore) => {
+              if (onDirectSaveScore) {
+                onDirectSaveScore(directEditMatch.roundIndex, directEditMatch.matchIndex, finalScore, true);
+              }
+              setDirectEditMatch(null);
+            }}
+          />
+        )}
 
       </div>
     </AppLayout>
