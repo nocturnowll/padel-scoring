@@ -99,7 +99,7 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
         </div>
 
         {/* Bottom Section Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="ag-dashboard-bottom-grid">
           
           {/* History / Active queue */}
           <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>

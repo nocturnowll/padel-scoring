@@ -425,7 +425,7 @@ function InteractiveScorerScreen({ tweaks, match, onBack, onSaveMatch }) {
         )}
 
         {/* Dynamic score zone */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, flex: 1, minHeight: 280 }}>
+        <div className="ag-scorer-touchpads-grid" style={{ flex: 1 }}>
           
           {/* TEAM A TAPPING TOUCHPAD */}
           <div 

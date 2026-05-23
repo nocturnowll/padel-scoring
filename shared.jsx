@@ -463,22 +463,11 @@ const StatsEngine = {
 // ──────────────────────────────────────────────────────────────────────────
 function AppLayout({ tweaks, children, onBack, title, eyebrow, actions }) {
   return (
-    <div style={{
-      width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column',
-      padding: 16, overflow: 'hidden', boxSizing: 'border-box'
-    }}>
-      <div className="ag-heavy" style={{
-        flex: 1, padding: 22, display: 'flex', flexDirection: 'column', 
-        gap: 16, overflow: 'hidden', width: '100%'
-      }}>
+    <div className="ag-layout-container">
+      <div className="ag-layout-inner ag-heavy">
         
         {/* Header toolbar */}
-        <header style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--hairline-soft)', paddingBottom: 12,
-          flexShrink: 0
-        }}>
+        <header className="ag-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {onBack && (
               <button onClick={onBack} className="ag-btn ag-btn-ghost ag-btn-sm" style={{ padding: 6, borderRadius: '50%' }}>
@@ -491,13 +480,13 @@ function AppLayout({ tweaks, children, onBack, title, eyebrow, actions }) {
             </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="ag-header-actions">
             {actions}
           </div>
         </header>
 
         {/* Content Box */}
-        <div style={{ flex: 1, overflowY: 'auto', width: '100%' }} className="ag-scroll">
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', width: '100%' }} className="ag-scroll">
           {children}
         </div>
         

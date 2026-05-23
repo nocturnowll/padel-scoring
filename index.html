@@ -301,39 +301,29 @@ function App() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden' }}>
       
       {/* Top Quick Header bar */}
-      <header className="ag-dark" style={{
-        display: 'flex', alignItems: 'center', justifySelf: 'stretch',
-        justifyContent: 'space-between', padding: '10px 16px',
-        borderBottom: '1px solid var(--hairline-soft)',
-        zIndex: 50, flexShrink: 0
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-dark))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, boxShadow: 'var(--shadow-pill)', flexShrink: 0
-          }}>{tweaks.clubEmoji}</div>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>
-            {tweaks.clubName} <span style={{ color: 'var(--brand-primary)', fontSize: 11, marginLeft: 6 }}>Atelier Glass</span>
+      <header className="ag-top-header ag-dark">
+        <div className="ag-top-header-left">
+          <div className="ag-top-header-emoji">{tweaks.clubEmoji}</div>
+          <span className="ag-top-header-title-container">
+            {tweaks.clubName} <span className="ag-top-header-title-badge">Atelier Glass</span>
           </span>
         </div>
 
         {/* Dynamic Mode Switcher (PWA vs Design Showcase Canvas) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="ag-top-header-right ag-mobile-hide">
           <button 
             className={`ag-pill ${viewMode === 'app' ? 'ag-pill-active' : ''}`}
             onClick={() => setViewMode('app')}
             style={{ height: 26, fontSize: 11 }}
           >
-            Live App Mode
+            Live App
           </button>
           <button 
             className={`ag-pill ${viewMode === 'canvas' ? 'ag-pill-active' : ''}`}
             onClick={() => setViewMode('canvas')}
             style={{ height: 26, fontSize: 11 }}
           >
-            Showcase Canvas
+            Showcase
           </button>
         </div>
       </header>

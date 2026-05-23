@@ -202,12 +202,12 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
           }}>
             
             {/* 2nd Place */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', background: '#94a3b8', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700
               }}>2</div>
-              <div style={{ fontSize: 12, fontWeight: 600 }}>{standings[1].name}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={standings[1].name}>{standings[1].name}</div>
               <div style={{ fontSize: 14, fontFamily: 'JetBrains Mono', fontWeight: 700, color: 'var(--text-secondary)' }}>
                 {standings[1].points} pts
               </div>
@@ -215,13 +215,13 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
             </div>
 
             {/* 1st Place */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <div style={{
                 width: 40, height: 40, borderRadius: '50%', background: 'var(--brand-primary)', color: 'var(--text-inverse)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700,
                 boxShadow: '0 0 15px var(--brand-glow)'
               }}>1</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{standings[0].name}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={standings[0].name}>{standings[0].name}</div>
               <div style={{ fontSize: 16, fontFamily: 'JetBrains Mono', fontWeight: 700, color: 'var(--brand-primary)' }}>
                 {standings[0].points} pts
               </div>
@@ -229,12 +229,12 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
             </div>
 
             {/* 3rd Place */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: '50%', background: '#b45309', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700
               }}>3</div>
-              <div style={{ fontSize: 12, fontWeight: 600 }}>{standings[2].name}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={standings[2].name}>{standings[2].name}</div>
               <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono', fontWeight: 700, color: 'var(--text-secondary)' }}>
                 {standings[2].points} pts
               </div>
@@ -246,43 +246,45 @@ function LeaderboardScreen({ tweaks, tournament, onBack, onFinishTournament }) {
 
         {/* Regular Leaderboard Table */}
         <div className="ag-card" style={{ padding: 16 }}>
-          <table className="ag-table">
-            <thead>
-              <tr>
-                <th style={{ width: 50 }}>Rank</th>
-                <th>Competitor Name</th>
-                <th style={{ textAlign: 'center' }}>Played</th>
-                <th style={{ textAlign: 'center', color: 'var(--success)' }}>Won</th>
-                <th style={{ textAlign: 'center', color: 'var(--danger)' }}>Lost</th>
-                <th style={{ textAlign: 'right' }}>Total Points</th>
-                <th style={{ textAlign: 'right' }}>Diff</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standings.map((player, idx) => (
-                <tr key={player.id || idx}>
-                  <td>
-                    <span style={{
-                      fontWeight: 700,
-                      color: idx === 0 ? 'var(--brand-primary)' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : 'var(--text-tertiary)'
-                    }}>
-                      #{idx + 1}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>{player.name}</td>
-                  <td style={{ textAlign: 'center' }}>{player.played}</td>
-                  <td style={{ textAlign: 'center', color: 'var(--success)' }}>{player.won}</td>
-                  <td style={{ textAlign: 'center', color: 'var(--danger)' }}>{player.lost}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, color: idx === 0 ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
-                    {player.points}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600, color: player.diff > 0 ? 'var(--success)' : player.diff < 0 ? 'var(--danger)' : 'var(--text-tertiary)' }}>
-                    {player.diff > 0 ? `+${player.diff}` : player.diff}
-                  </td>
+          <div style={{ width: '100%', overflowX: 'auto' }} className="ag-scroll">
+            <table className="ag-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 50 }}>Rank</th>
+                  <th>Competitor Name</th>
+                  <th className="ag-mobile-hide" style={{ textAlign: 'center' }}>Played</th>
+                  <th className="ag-mobile-hide" style={{ textAlign: 'center', color: 'var(--success)' }}>Won</th>
+                  <th className="ag-mobile-hide" style={{ textAlign: 'center', color: 'var(--danger)' }}>Lost</th>
+                  <th style={{ textAlign: 'right' }}>Total Points</th>
+                  <th style={{ textAlign: 'right' }}>Diff</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {standings.map((player, idx) => (
+                  <tr key={player.id || idx}>
+                    <td>
+                      <span style={{
+                        fontWeight: 700,
+                        color: idx === 0 ? 'var(--brand-primary)' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : 'var(--text-tertiary)'
+                      }}>
+                        #{idx + 1}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{player.name}</td>
+                    <td className="ag-mobile-hide" style={{ textAlign: 'center' }}>{player.played}</td>
+                    <td className="ag-mobile-hide" style={{ textAlign: 'center', color: 'var(--success)' }}>{player.won}</td>
+                    <td className="ag-mobile-hide" style={{ textAlign: 'center', color: 'var(--danger)' }}>{player.lost}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: idx === 0 ? 'var(--brand-primary)' : 'var(--text-primary)' }}>
+                      {player.points}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: player.diff > 0 ? 'var(--success)' : player.diff < 0 ? 'var(--danger)' : 'var(--text-tertiary)' }}>
+                      {player.diff > 0 ? `+${player.diff}` : player.diff}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>

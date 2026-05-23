@@ -2,18 +2,15 @@
 
 function StepPills({ current, total, labels }) {
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginBottom: 10, width: '100%' }}>
+    <div className="ag-step-pills">
       {Array.from({ length: total }).map((_, idx) => {
         const active = current === idx + 1;
         const done = current > idx + 1;
         return (
           <div 
             key={idx} 
-            className={`ag-inset ${active ? 'pulse-glow-border' : ''}`}
+            className={`ag-inset ag-step-pill ${active ? 'pulse-glow-border' : ''}`}
             style={{
-              flex: 1, 
-              padding: '10px 14px', 
-              textAlign: 'center', 
               background: active 
                 ? 'var(--brand-light)' 
                 : done 
@@ -24,14 +21,13 @@ function StepPills({ current, total, labels }) {
                 : done 
                   ? 'rgba(255, 255, 255, 0.15)' 
                   : 'var(--hairline)',
-              opacity: active || done ? 1 : 0.5,
-              transition: 'all 0.25s'
+              opacity: active || done ? 1 : 0.5
             }}
           >
-            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: active ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
+            <div className="ag-step-pill-number" style={{ color: active ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
               Step {idx + 1}
             </div>
-            <div style={{ fontSize: 11.5, fontWeight: 600, color: '#fff', marginTop: 2 }}>
+            <div className="ag-step-pill-label">
               {labels[idx]}
             </div>
           </div>
@@ -133,16 +129,25 @@ function SetupScreen({ tweaks, onBack, onStart }) {
     }
   };
 
+  // Stable backtracking handler
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(prev => prev - 1);
+    } else {
+      onBack();
+    }
+  };
+
   return (
     <AppLayout
       tweaks={tweaks}
       title="Setup Tournament"
       eyebrow="Matchmaker Wizard"
-      onBack={onBack}
+      onBack={handleBack}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {step > 1 && (
-            <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={() => setStep(step - 1)}>
+            <button className="ag-btn ag-btn-ghost ag-btn-sm" onClick={handleBack}>
               Back
             </button>
           )}
@@ -175,7 +180,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             {/* Sport toggle */}
             <div>
               <label className="ag-label">1. Sport Type</label>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="ag-flex-row-responsive">
                 <button 
                   className={`ag-pill ${sport === 'padel' ? 'ag-pill-active' : ''}`}
                   onClick={() => {
@@ -202,7 +207,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             {/* Tournament Format Selector */}
             <div>
               <label className="ag-label">2. Tournament Structure</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="ag-structure-grid">
                 
                 <div 
                   className={`ag-inset ${format === 'individual_americano' ? 'pulse-glow-border' : ''}`}
@@ -259,7 +264,15 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   </span>
                 </div>
 
-              </div>
+            {/* Step 1 Bottom Button Bar */}
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--hairline-soft)', paddingTop: 16 }}>
+              <button 
+                className="ag-btn ag-btn-primary" 
+                onClick={() => setStep(2)}
+                style={{ padding: '10px 24px' }}
+              >
+                Continue <Icon name="chevron-right" size={14} />
+              </button>
             </div>
 
           </div>
@@ -273,22 +286,22 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             {/* Scoring Mode */}
             <div>
               <label className="ag-label">Scoring Method</label>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="ag-flex-row-responsive">
                 {sport !== 'tennis' && (
                   <button 
                     className={`ag-pill ${scoringMode === 'points' ? 'ag-pill-active' : ''}`}
                     onClick={() => setScoringMode('points')}
-                    style={{ flex: 1, height: 40, justifyContent: 'center' }}
+                    style={{ flex: 1, height: 'auto', minHeight: 40, padding: '8px 12px', whiteSpace: 'normal', textAlign: 'center', justifyContent: 'center' }}
                   >
-                    Raw Americano Points (e.g. 16/24/32 pts)
+                    Raw Americano Points
                   </button>
                 )}
                 <button 
                   className={`ag-pill ${scoringMode === 'tennis' ? 'ag-pill-active' : ''}`}
                   onClick={() => setScoringMode('tennis')}
-                  style={{ flex: 1, height: 40, justifyContent: 'center' }}
+                  style={{ flex: 1, height: 'auto', minHeight: 40, padding: '8px 12px', whiteSpace: 'normal', textAlign: 'center', justifyContent: 'center' }}
                 >
-                  Traditional Sets (Tennis / Set scoring)
+                  Traditional Sets
                 </button>
               </div>
             </div>
@@ -297,15 +310,15 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             {scoringMode === 'points' ? (
               <div>
                 <label className="ag-label">Total Points per Match</label>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 6, width: '100%' }}>
                   {[16, 24, 32, 40].map(p => (
                     <button 
                       key={p} 
                       className={`ag-pill ${pointsLimit === p ? 'ag-pill-active' : ''}`}
                       onClick={() => setPointsLimit(p)}
-                      style={{ flex: 1, justifyContent: 'center', height: 36 }}
+                      style={{ flex: 1, justifyContent: 'center', height: 36, padding: 0, minWidth: 0, fontSize: 11 }}
                     >
-                      {p} Points
+                      {p} Pts
                     </button>
                   ))}
                 </div>
@@ -319,34 +332,34 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                 {/* Sets format */}
                 <div>
                   <label className="ag-label">Sets Format (Best-Of / First-To)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  <div className="ag-sets-grid">
                     <button 
                       className={`ag-pill ${setsFormat === 'best3' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('best3')}
-                      style={{ justifyContent: 'center', height: 36 }}
+                      style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 3 sets
+                      Best of 3
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best4' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('best4')}
-                      style={{ justifyContent: 'center', height: 36 }}
+                      style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 4 sets (Ties ok)
+                      Best of 4 (Ties)
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'best5' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('best5')}
-                      style={{ justifyContent: 'center', height: 36 }}
+                      style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      Best of 5 sets
+                      Best of 5
                     </button>
                     <button 
                       className={`ag-pill ${setsFormat === 'first3' ? 'ag-pill-active' : ''}`}
                       onClick={() => setSetsFormat('first3')}
-                      style={{ justifyContent: 'center', height: 36 }}
+                      style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', whiteSpace: 'normal', textAlign: 'center', fontSize: 11 }}
                     >
-                      First to 3 sets
+                      First to 3
                     </button>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
@@ -355,7 +368,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="ag-rules-grid">
                   {/* Advantage rule */}
                   <div>
                     <label className="ag-label">Advantage / Deuce Rule</label>
@@ -386,12 +399,31 @@ function SetupScreen({ tweaks, onBack, onStart }) {
               </div>
             )}
 
+            {/* Step 2 Bottom Button Bar */}
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--hairline-soft)', paddingTop: 16 }}>
+              <button 
+                className="ag-btn ag-btn-ghost" 
+                onClick={handleBack}
+                style={{ padding: '10px 20px' }}
+              >
+                <Icon name="chevron-left" size={14} /> Back
+              </button>
+              <button 
+                className="ag-btn ag-btn-primary" 
+                onClick={() => setStep(3)}
+                style={{ padding: '10px 24px' }}
+              >
+                Continue <Icon name="chevron-right" size={14} />
+              </button>
+            </div>
+
           </div>
         )}
 
         {/* STEP 3: Players & Courts */}
         {step === 3 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
+            <div className="ag-setup-grid">
             
             {/* Roster management */}
             <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -404,7 +436,6 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                 </button>
               </div>
 
-              {/* Add Input */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <input 
                   type="text" 
@@ -413,8 +444,9 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(); }}
+                  style={{ flex: 1, minWidth: 0 }}
                 />
-                <button className="ag-btn ag-btn-primary" onClick={handleAddPlayer} style={{ padding: '0 18px' }}>
+                <button className="ag-btn ag-btn-primary" onClick={handleAddPlayer} style={{ padding: '0 18px', flexShrink: 0 }}>
                   <Icon name="plus" size={16} />
                 </button>
               </div>
@@ -449,7 +481,7 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                         padding: '6px 10px', borderRadius: 8, borderBottom: '1px solid var(--hairline-soft)'
                       }}
                     >
-                      <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }} title={p}>
                         {idx + 1}. {p}
                       </span>
                       <button 
@@ -470,13 +502,13 @@ function SetupScreen({ tweaks, onBack, onStart }) {
               
               <div>
                 <label className="ag-label">Available Courts</label>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, width: '100%' }}>
                   {[1, 2, 3, 4].map(c => (
                     <button 
                       key={c} 
                       className={`ag-pill ${courtsCount === c ? 'ag-pill-active' : ''}`}
                       onClick={() => setCourtsCount(c)}
-                      style={{ flex: 1, justifyContent: 'center', height: 40 }}
+                      style={{ flex: 1, justifyContent: 'center', height: 40, padding: 0, minWidth: 0, fontSize: 11 }}
                     >
                       {c} {c === 1 ? 'Court' : 'Courts'}
                     </button>
@@ -510,7 +542,27 @@ function SetupScreen({ tweaks, onBack, onStart }) {
             </div>
 
           </div>
-        )}
+
+          {/* Step 3 Bottom Button Bar */}
+          <div className="ag-card" style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+            <button 
+              className="ag-btn ag-btn-ghost" 
+              onClick={handleBack}
+              style={{ padding: '10px 20px' }}
+            >
+              <Icon name="chevron-left" size={14} /> Back
+            </button>
+            <button 
+              className="ag-btn ag-btn-primary pulse-glow-border" 
+              onClick={handleLaunch}
+              style={{ padding: '10px 28px' }}
+            >
+              <Icon name="play" size={14} /> Start Matches
+            </button>
+          </div>
+
+        </div>
+      )}
 
       </div>
     </AppLayout>

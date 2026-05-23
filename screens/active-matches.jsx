@@ -91,7 +91,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
         </div>
 
         {/* Current Round Panel */}
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div className="ag-active-matches-grid">
           
           {/* Match Cards List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -111,20 +111,12 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                 return (
                   <div 
                     key={match.id || mIdx} 
-                    className={`ag-card ${match.completed ? '' : 'pulse-glow-border'}`}
-                    style={{
-                      padding: 16, 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      border: match.completed ? undefined : '1px solid rgba(255, 255, 255, 0.1)',
-                      transition: 'transform 0.15s, border-color 0.15s'
-                    }}
+                    className={`ag-card ag-match-card ${match.completed ? '' : 'pulse-glow-border'}`}
+                    style={match.completed ? {} : { border: '1px solid rgba(255, 255, 255, 0.1)' }}
                     onClick={() => onSelectMatch(match, activeRoundIndex, mIdx)}
                   >
                     {/* Court identifier and players */}
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div className="ag-match-card-players">
                       <div style={{
                         width: 38, height: 38, borderRadius: 10,
                         background: match.completed ? 'rgba(255,255,255,0.03)' : 'var(--brand-light)',
@@ -153,7 +145,7 @@ function ActiveMatchesScreen({ tweaks, tournament, onBack, onCancelTournament, o
                     </div>
                     
                     {/* Score display and tap-action */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                    <div className="ag-match-card-actions">
                       
                       {hasScore ? (
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
