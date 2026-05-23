@@ -1223,27 +1223,6 @@ function SetupScreen({ tweaks, onBack, onStart }) {
                   </div>
                 </div>
 
-                {/* Games per Set */}
-                <div>
-                  <label className="ag-label">Games per Set (Set Target)</label>
-                  <div className="ag-sets-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                    {[4, 5, 6, 8].map(g => (
-                      <button 
-                        key={g}
-                        type="button"
-                        className={`ag-pill ${gamesPerSet === g ? 'ag-pill-active' : ''}`}
-                        onClick={() => setGamesPerSet(g)}
-                        style={{ justifyContent: 'center', height: 'auto', minHeight: 36, padding: '4px 8px', textAlign: 'center', fontSize: 11 }}
-                      >
-                        {g === 4 ? '4 (Short)' : g === 6 ? '6 (Standard)' : g === 8 ? '8 (Pro)' : `${g} games`}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
-                    Select how many games a team needs to win to claim a set (2-game margin applies).
-                  </div>
-                </div>
-
                 <div className={scoringMode === 'tennis' ? "ag-rules-grid" : ""}>
                   {/* Advantage rule */}
                   <div>
