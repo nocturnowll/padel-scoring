@@ -615,7 +615,16 @@ Object.assign(window, { Icon, SpeechAnnouncer, Matchmaker, StatsEngine, AppLayou
 /* --- START FILE: dashboard.jsx --- */
 /* screens/dashboard.jsx — Dashboard / Welcome screen */
 
-function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTournament, onResumeTournament, onQuickMatch, onViewHistory }) {
+function DashboardScreen({ 
+  tweaks, 
+  tournamentHistory, 
+  activeTournament, 
+  onNewTournament, 
+  onResumeTournament, 
+  onQuickMatch, 
+  onViewHistory,
+  onImportHistory
+}) {
   // Sum stats from history
   const totalCompleted = (tournamentHistory && Array.isArray(tournamentHistory)) ? tournamentHistory.length : 0;
   const totalActive = activeTournament ? 1 : 0;
@@ -738,7 +747,80 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
           <div className="ag-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="ag-h3" style={{ margin: 0 }}>Match Roster History</h3>
-              <Icon name="history" size={16} color="var(--text-tertiary)" />
+              
+              {/* Backup & Restore controls */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: '4px 8px', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4, height: 'auto', border: '1px solid var(--hairline)' }}
+                  title="Export History Backup File"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tournamentHistory));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", `padel_history_backup_${new Date().toISOString().split('T')[0]}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                  }}
+                >
+                  <Icon name="download" size={11} /> Export
+                </button>
+                
+                <button 
+                  className="ag-btn ag-btn-ghost ag-btn-sm" 
+                  style={{ padding: '4px 8px', fontSize: 10.5, display: 'flex', alignItems: 'center', gap: 4, height: 'auto', border: '1px solid var(--hairline)' }}
+                  title="Import History Backup File"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const fileInput = document.createElement('input');
+                    fileInput.setAttribute("type", "file");
+                    fileInput.setAttribute("accept", ".json");
+                    fileInput.style.display = 'none';
+                    fileInput.onchange = (evt) => {
+                      const file = evt.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (re) => {
+                        try {
+                          const parsed = JSON.parse(re.target.result);
+                          if (Array.isArray(parsed)) {
+                            if (confirm(`Are you sure you want to import ${parsed.length} tournament records? This will merge with your existing history.`)) {
+                              // Merge history based on unique IDs
+                              const existingIds = new Set(tournamentHistory.map(t => t.id));
+                              const merged = [...tournamentHistory];
+                              parsed.forEach(item => {
+                                if (item && item.id && !existingIds.has(item.id)) {
+                                  merged.push(item);
+                                }
+                              });
+                              // Sort by finished date desc
+                              merged.sort((a, b) => new Date(b.finishedAt || 0) - new Date(a.finishedAt || 0));
+                              
+                              if (onImportHistory) {
+                                onImportHistory(merged);
+                              }
+                              alert("History backup successfully imported and merged!");
+                            }
+                          } else {
+                            alert("Invalid backup file format. Must be a JSON array of past tournaments.");
+                          }
+                        } catch(err) {
+                          alert("Error parsing backup file: " + err.message);
+                        }
+                      };
+                      reader.readAsText(file);
+                    };
+                    document.body.appendChild(fileInput);
+                    fileInput.click();
+                    fileInput.remove();
+                  }}
+                >
+                  <Icon name="upload" size={11} /> Import
+                </button>
+                <Icon name="history" size={15} color="var(--text-tertiary)" />
+              </div>
             </div>
             
             {tournamentHistory.length === 0 ? (
@@ -751,13 +833,13 @@ function DashboardScreen({ tweaks, tournamentHistory, activeTournament, onNewTou
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {tournamentHistory.map((t, idx) => (
                   <div 
-                    key={t.id || idx} 
-                    className="ag-inset" 
-                    style={{
-                      padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      transition: 'border-color 0.2s', cursor: 'pointer'
-                    }}
-                    onClick={() => onViewHistory(t)}
+                     key={t.id || idx} 
+                     className="ag-inset" 
+                     style={{
+                       padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                       transition: 'border-color 0.2s', cursor: 'pointer'
+                     }}
+                     onClick={() => onViewHistory(t)}
                   >
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div>
@@ -4230,6 +4312,10 @@ function App() {
                 setActiveTournament(tourney);
                 setCurrentScreen('leaderboard');
               }}
+              onImportHistory={(merged) => {
+                setTournamentHistory(merged);
+                localStorage.setItem('padel_tournament_history', JSON.stringify(merged));
+              }}
             />
           );
         case 'setup':
@@ -4558,6 +4644,7 @@ function App() {
                     onResumeTournament={() => {}}
                     onQuickMatch={() => {}}
                     onViewHistory={() => {}}
+                    onImportHistory={() => {}}
                   />
                 </div>
               </div>
